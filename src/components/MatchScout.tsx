@@ -78,7 +78,7 @@ export default function MatchScout() {
       .attr('stroke-width', 2);
 
     // Heatmap data points
-    let dataPoints = [];
+    let dataPoints: { x: number; y: number; weight: number }[] = [];
     if (activePlayer === 'team') {
       dataPoints = [
         { x: 30, y: 70, weight: 5 },

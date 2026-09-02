@@ -22,6 +22,14 @@ export default function MatchMVP() {
 
   const totalVotes = candidates.reduce((sum, c) => sum + c.votes, 0);
 
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({ title: "صوّتت لـ MVP", text: "لقد قمت بالتصويت لأفضل لاعب في المباراة!" });
+    } else {
+      alert("تم نسخ الرابط!");
+    }
+  };
+
   const handleVote = (candidateId: string) => {
     if (votedCandidate) return;
 

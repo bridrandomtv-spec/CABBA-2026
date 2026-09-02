@@ -4,7 +4,7 @@ import MatchMVP from './MatchMVP';
 import MatchScout from './MatchScout';
 import { Target } from 'lucide-react';
 
-import { Activity, Users, Star, BarChart3, TrendingUp, Bus, MapPin, CheckCircle, Calendar, Bell, Ticket, CalendarPlus } from 'lucide-react';
+import { Activity, Users, Star, BarChart3, TrendingUp, Bus, MapPin, CheckCircle, Calendar, Bell, Ticket, CalendarPlus, History } from 'lucide-react';
 import TicketManager from './TicketManager';
 import InGameNotifications from './InGameNotifications';
 import LiveMatchUpdate from './LiveMatchUpdate';
@@ -20,7 +20,7 @@ import MatchAbsences from './MatchAbsences';
 import MatchArchive from './MatchArchive';
 
 export default function MatchCenter() {
-  const [activeTab, setActiveTab] = useState<'live' | 'stats' | 'season' | 'compare' | 'formation' | 'motm' | 'travel' | 'predictions' | 'calendar' | 'tickets' | 'scout'>('live');
+  const [activeTab, setActiveTab] = useState<'live' | 'stats' | 'season' | 'compare' | 'formation' | 'motm' | 'travel' | 'predictions' | 'calendar' | 'tickets' | 'scout' | 'archive'>('live');
   const [cabbaScore, setCabbaScore] = useState(0);
   const [opponentScore, setOpponentScore] = useState(0);
   const [predicted, setPredicted] = useState(false);

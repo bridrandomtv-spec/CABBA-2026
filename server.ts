@@ -8,7 +8,7 @@ dotenv.config();
 const app = express();
 // Cloud Run (et la plupart des hébergeurs) imposent le port via la variable
 // d'environnement PORT. Le 3000 codé en dur empêchait tout démarrage en ligne.
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = 3000;
 const HOST = "0.0.0.0";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -104,7 +104,7 @@ async function startServer() {
     // Import dynamique : avec un import statique, esbuild produit un `require("vite")`
     // en tête de dist/server.cjs, ce qui obligeait à installer Vite (un outil de
     // build) sur le serveur de production, y compris avec `npm ci --omit=dev`.
-    const { createServer as createViteServer } = await import("vite");
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
