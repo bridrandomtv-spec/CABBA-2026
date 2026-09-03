@@ -1,4 +1,5 @@
-import { Award, Shield, Settings, CheckCircle2, ChevronLeft, Moon, Sun, Heart, Calendar as CalendarIcon, MapPin } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Award, X, AlertCircle, Shield, Settings, CheckCircle2, ChevronLeft, Moon, Sun, Heart, Calendar as CalendarIcon, MapPin } from 'lucide-react';
 import { useFavorites } from '../hooks/useFavorites';
 import { MATCHES_DATA } from './MatchCalendar';
 import NotificationSettings from './NotificationSettings';
@@ -9,6 +10,209 @@ import { useTheme } from '../ThemeContext';
 export default function Profile() {
   const { theme, toggleTheme } = useTheme();
   const { favorites } = useFavorites();
+  const [userName, setUserName] = useState(() => localStorage.getItem('userName') || 'أمين. ب');
+  const [userEmail, setUserEmail] = useState(() => localStorage.getItem('userEmail') || 'supporter@cabba.dz');
+  const [userAvatar, setUserAvatar] = useState(() => localStorage.getItem('userAvatar') || `https://api.dicebear.com/7.x/avataaars/svg?seed=Amine&backgroundColor=f59e0b`);
+  
+  const [editName, setEditName] = useState(userName);
+  const [editEmail, setEditEmail] = useState(userEmail);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setUserAvatar(base64String);
+        localStorage.setItem('userAvatar', base64String);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSaveProfile = () => {
+    localStorage.setItem('userName', editName);
+    localStorage.setItem('userEmail', editEmail);
+    setUserName(editName);
+    setUserEmail(editEmail);
+    alert('تم حفظ التعديلات بنجاح!');
+    setActiveModal('none');
+  };
+
+  const [activeModal, setActiveModal] = useState<'none' | 'profile' | 'language' | 'about'>('none');
+  const [language, setLanguage] = useState(() => localStorage.getItem('appLang') || 'ar');
+  
+  const changeLanguage = (lang: string) => {
+    setLanguage(lang);
+    localStorage.setItem('appLang', lang);
+    if (lang === 'fr') {
+      alert('La langue française sera bientôt appliquée partout ! (En cours de traduction)');
+    } else if (lang === 'en') {
+      alert('English language will be applied everywhere soon! (Translation in progress)');
+    }
+  };
+
+
+
+
+  const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('isLoggedIn') === 'true');
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [formErrors, setFormErrors] = useState<string[]>([]);
+
+  const handleAuth = (e: React.FormEvent) => {
+    e.preventDefault();
+    const errors: string[] = [];
+    
+    if (authMode === 'signup' && name.trim().length < 3) {
+      errors.push("الاسم يجب أن يكون 3 أحرف على الأقل");
+    }
+    if (!email.includes('@')) {
+      errors.push("البريد الإلكتروني غير صالح (يجب أن يحتوي على @)");
+    }
+    if (password.length < 6) {
+      errors.push("كلمة المرور قصيرة جداً (يجب أن تكون 6 أحرف على الأقل)");
+    }
+    if (authMode === 'signup' && password !== confirmPassword) {
+      errors.push("كلمات المرور غير متطابقة");
+    }
+
+    if (errors.length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+
+    setFormErrors([]);
+    localStorage.setItem('isLoggedIn', 'true');
+    // Save mock user data
+    if (authMode === 'signup') {
+      localStorage.setItem('userName', name);
+      setUserName(name);
+    }
+    localStorage.setItem('userEmail', email);
+    setUserEmail(email);
+    setIsLoggedIn(true);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('isLoggedIn');
+    setIsLoggedIn(false);
+    alert("تم تسجيل الخروج بنجاح");
+  };
+
+  if (!isLoggedIn) {
+    return (
+      <div className="p-4 space-y-6 h-full flex flex-col justify-center animate-in fade-in slide-in-from-bottom-4 duration-500" dir="rtl">
+        <div className="text-center space-y-4 mb-8 mt-10">
+          <div className="w-24 h-24 mx-auto bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center border-4 border-zinc-900 shadow-[0_0_30px_rgba(234,179,8,0.3)]">
+            <span className="font-bold text-black text-5xl">C</span>
+          </div>
+          <h2 className="text-2xl font-bold text-white">
+            {authMode === 'login' ? 'تسجيل الدخول' : 'إنشاء حساب جديد'}
+          </h2>
+          <p className="text-sm text-zinc-400">
+            {authMode === 'login' 
+              ? 'سجل دخولك للانضمام إلى مجتمع أنصار الجراد الأصفر.'
+              : 'أنشئ حسابك الآن لتصبح جزءاً من العائلة الصفراء.'}
+          </p>
+        </div>
+
+        <form onSubmit={handleAuth} className="space-y-4 max-w-sm mx-auto w-full pb-10">
+          {formErrors.length > 0 && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-4 text-right">
+              <div className="flex items-center gap-2 text-red-500 font-bold text-sm mb-2">
+                <AlertCircle size={16} />
+                <span>Fix errors ({formErrors.length} أخطاء):</span>
+              </div>
+              <ul className="list-disc list-inside text-xs text-red-400 space-y-1">
+                {formErrors.map((err, i) => <li key={i}>{err}</li>)}
+              </ul>
+            </div>
+          )}
+
+          {authMode === 'signup' && (
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-zinc-400">الاسم الكامل</label>
+              <input 
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required={authMode === 'signup'} 
+                type="text" 
+                placeholder="أمين ب." 
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-white text-right focus:outline-none focus:border-yellow-500 transition-colors" 
+              />
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-zinc-400">البريد الإلكتروني</label>
+            <input 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required 
+              type="email" 
+              placeholder="supporter@cabba.dz" 
+              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-white text-right focus:outline-none focus:border-yellow-500 transition-colors" 
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-zinc-400">كلمة المرور</label>
+            <input 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required 
+              type="password" 
+              placeholder="••••••••" 
+              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-white text-right focus:outline-none focus:border-yellow-500 transition-colors" 
+            />
+          </div>
+
+          {authMode === 'signup' && (
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-zinc-400">تأكيد كلمة المرور</label>
+              <input 
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required={authMode === 'signup'} 
+                type="password" 
+                placeholder="••••••••" 
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-white text-right focus:outline-none focus:border-yellow-500 transition-colors" 
+              />
+            </div>
+          )}
+          
+          <div className="flex justify-between items-center px-1">
+            {authMode === 'login' ? (
+              <>
+                <button type="button" onClick={() => alert('سيتم إرسال رابط إعادة تعيين كلمة المرور.')} className="text-xs text-yellow-500 font-bold hover:underline">
+                  هل نسيت كلمة المرور؟
+                </button>
+                <button type="button" onClick={() => { setAuthMode('signup'); setFormErrors([]); }} className="text-xs text-zinc-400 font-bold hover:text-white transition-colors">
+                  إنشاء حساب جديد
+                </button>
+              </>
+            ) : (
+              <button type="button" onClick={() => { setAuthMode('login'); setFormErrors([]); }} className="text-xs text-zinc-400 font-bold hover:text-white transition-colors w-full text-center">
+                لديك حساب بالفعل؟ تسجيل الدخول
+              </button>
+            )}
+          </div>
+
+          <button type="submit" className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold text-lg p-4 rounded-xl shadow-[0_0_15px_rgba(234,179,8,0.4)] transition-all mt-4">
+            {authMode === 'login' ? 'تسجيل الدخول' : 'إنشاء حساب'}
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+
+
   const favoriteMatches = MATCHES_DATA.filter(m => favorites.includes(m.id));
 
   return (
@@ -31,11 +235,11 @@ export default function Profile() {
         <div className="relative z-10 flex justify-between items-end">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-lg bg-zinc-800 border-2 border-yellow-500 overflow-hidden shadow-lg">
-              <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Amine&backgroundColor=f59e0b" alt="صورة المناصر" className="w-full h-full object-cover" />
+              <img src={userAvatar} alt={`صورة ${userName}`} className="w-full h-full object-cover" />
             </div>
             <div>
               <p className="text-zinc-500 text-xs mb-1 uppercase tracking-wider">الاسم واللقب</p>
-              <p className="text-white font-bold text-lg">أمين. ب</p>
+              <p className="text-white font-bold text-lg">{userName}</p>
             </div>
           </div>
           
@@ -135,7 +339,7 @@ export default function Profile() {
         </div>
 
         <div className="space-y-3">
-          <button className="w-full bg-zinc-800 hover:bg-zinc-700 transition-colors p-3 rounded-xl flex items-center justify-between group">
+          <button onClick={() => alert('هذه الخاصية ستتوفر قريباً!')} className="w-full bg-zinc-800 hover:bg-zinc-700 transition-colors p-3 rounded-xl flex items-center justify-between group">
             <div className="flex items-center gap-3">
               <Shield size={18} className="text-zinc-400 group-hover:text-yellow-500 transition-colors" />
               <span className="text-sm text-white font-medium">توقع مباريات الكابا</span>
@@ -143,7 +347,7 @@ export default function Profile() {
             <ChevronLeft size={16} className="text-zinc-500" />
           </button>
           
-          <button className="w-full bg-zinc-800 hover:bg-zinc-700 transition-colors p-3 rounded-xl flex items-center justify-between group">
+          <button onClick={() => alert('هذه الخاصية ستتوفر قريباً!')} className="w-full bg-zinc-800 hover:bg-zinc-700 transition-colors p-3 rounded-xl flex items-center justify-between group">
             <div className="flex items-center gap-3">
               <CheckCircle2 size={18} className="text-zinc-400 group-hover:text-yellow-500 transition-colors" />
               <span className="text-sm text-white font-medium">استبدال النقاط بالمكافآت</span>
@@ -183,42 +387,146 @@ export default function Profile() {
         <h4 className="font-bold text-zinc-400 text-sm px-2 mb-2">الإعدادات</h4>
         
         <button 
-          onClick={() => alert("قريباً: تعديل الملف الشخصي")}
-          className="w-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800/50 p-4 rounded-xl flex items-center justify-between transition-colors"
+          onClick={() => setActiveModal('profile')}
+          className="w-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800/50 p-4 rounded-xl flex items-center justify-between transition-colors group"
         >
-          <span className="text-sm text-white font-medium">الملف الشخصي</span>
-          <ChevronLeft size={16} className="text-zinc-600" />
+          <span className="text-sm text-white font-medium group-hover:text-yellow-500 transition-colors">تعديل الملف الشخصي</span>
+          <ChevronLeft size={16} className="text-zinc-600 group-hover:text-yellow-500 transition-colors" />
         </button>
 
         <NotificationSettings />
 
         <button 
-          onClick={() => alert("العربية هي اللغة الوحيدة المتاحة حالياً.")}
-          className="w-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800/50 p-4 rounded-xl flex items-center justify-between transition-colors"
+          onClick={() => setActiveModal('language')}
+          className="w-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800/50 p-4 rounded-xl flex items-center justify-between transition-colors group"
         >
-          <span className="text-sm text-white font-medium">اللغة (العربية)</span>
-          <ChevronLeft size={16} className="text-zinc-600" />
+          <span className="text-sm text-white font-medium group-hover:text-yellow-500 transition-colors">إعدادات اللغة</span>
+          <ChevronLeft size={16} className="text-zinc-600 group-hover:text-yellow-500 transition-colors" />
         </button>
 
         <button 
-          onClick={() => alert("تطبيق أنصار شباب أهلي برج بوعريريج - الإصدار 1.0")}
-          className="w-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800/50 p-4 rounded-xl flex items-center justify-between transition-colors"
+          onClick={() => setActiveModal('about')}
+          className="w-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800/50 p-4 rounded-xl flex items-center justify-between transition-colors group"
         >
-          <span className="text-sm text-white font-medium">عن التطبيق</span>
-          <ChevronLeft size={16} className="text-zinc-600" />
+          <span className="text-sm text-white font-medium group-hover:text-yellow-500 transition-colors">عن التطبيق</span>
+          <ChevronLeft size={16} className="text-zinc-600 group-hover:text-yellow-500 transition-colors" />
         </button>
       </div>
       
       <button 
-        onClick={() => {
-          alert("تم تسجيل الخروج بنجاح");
-          window.location.reload();
-        }}
+        onClick={handleLogout}
         className="w-full text-red-400 text-sm font-bold p-4 bg-zinc-900 rounded-xl hover:bg-red-400/10 transition-colors"
       >
         تسجيل الخروج
       </button>
 
+
+      {/* Modals for Settings */}
+      {activeModal !== 'none' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-zinc-900 border border-yellow-500/30 rounded-3xl w-full max-w-sm overflow-hidden shadow-[0_10px_40px_rgba(234,179,8,0.1)] flex flex-col max-h-[80vh]">
+            <div className="flex justify-between items-center p-4 border-b border-zinc-800">
+              <h3 className="font-bold text-white text-lg">
+                {activeModal === 'profile' && 'تعديل الملف الشخصي'}
+                {activeModal === 'language' && 'اللغة (Language)'}
+                {activeModal === 'about' && 'عن التطبيق'}
+              </h3>
+              <button 
+                onClick={() => setActiveModal('none')}
+                className="p-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white rounded-full transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto">
+              {activeModal === 'profile' && (
+                <div className="space-y-4">
+                  <div className="flex flex-col items-center mb-6">
+                    <div className="w-20 h-20 rounded-full bg-zinc-800 border-2 border-yellow-500 overflow-hidden shadow-lg mb-3">
+                      <img src={userAvatar} alt="Avatar" className="w-full h-full object-cover" />
+                    </div>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      ref={fileInputRef} 
+                      className="hidden" 
+                      onChange={handleImageUpload} 
+                    />
+                    <button onClick={() => fileInputRef.current?.click()} className="text-xs text-yellow-500 font-bold hover:underline">
+                      تغيير الصورة
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-zinc-400">الاسم الكامل</label>
+                    <input 
+                      type="text" 
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      className="w-full bg-zinc-800 border border-zinc-700 rounded-xl p-3 text-white text-right focus:outline-none focus:border-yellow-500 transition-colors" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-zinc-400">البريد الإلكتروني</label>
+                    <input 
+                      type="email" 
+                      value={editEmail}
+                      onChange={(e) => setEditEmail(e.target.value)}
+                      className="w-full bg-zinc-800 border border-zinc-700 rounded-xl p-3 text-white text-right focus:outline-none focus:border-yellow-500 transition-colors" 
+                    />
+                  </div>
+                  <button 
+                    onClick={handleSaveProfile}
+                    className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold p-3 rounded-xl transition-colors mt-2"
+                  >
+                    حفظ التغييرات
+                  </button>
+                </div>
+              )}
+
+              {activeModal === 'language' && (
+                <div className="space-y-3">
+                  <button 
+                    onClick={() => changeLanguage('ar')}
+                    className={`w-full p-4 rounded-xl flex items-center justify-between transition-colors ${language === 'ar' ? 'bg-zinc-800 border-2 border-yellow-500' : 'bg-zinc-800/50 border-2 border-transparent hover:bg-zinc-800'}`}>
+                    <span className="font-bold text-white">العربية (Arabic)</span>
+                    {language === 'ar' && <CheckCircle2 size={20} className="text-yellow-500" />}
+                  </button>
+                  <button 
+                    onClick={() => changeLanguage('fr')}
+                    className={`w-full p-4 rounded-xl flex items-center justify-between transition-colors ${language === 'fr' ? 'bg-zinc-800 border-2 border-yellow-500' : 'bg-zinc-800/50 border-2 border-transparent hover:bg-zinc-800'}`}>
+                    <span className="font-bold text-white">الفرنسية (Français)</span>
+                    {language === 'fr' && <CheckCircle2 size={20} className="text-yellow-500" />}
+                  </button>
+                  <button 
+                    onClick={() => changeLanguage('en')}
+                    className={`w-full p-4 rounded-xl flex items-center justify-between transition-colors ${language === 'en' ? 'bg-zinc-800 border-2 border-yellow-500' : 'bg-zinc-800/50 border-2 border-transparent hover:bg-zinc-800'}`}>
+                    <span className="font-bold text-white">الإنجليزية (English)</span>
+                    {language === 'en' && <CheckCircle2 size={20} className="text-yellow-500" />}
+                  </button>
+                </div>
+              )}
+
+              {activeModal === 'about' && (
+                <div className="text-center space-y-6">
+                  <div className="w-24 h-24 mx-auto bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center border-4 border-zinc-800 shadow-[0_0_30px_rgba(234,179,8,0.3)]">
+                    <span className="font-bold text-black text-5xl">C</span>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-white text-xl mb-1">CABBA Supporters</h4>
+                    <p className="text-yellow-500 font-bold text-sm">الإصدار 1.0.0</p>
+                  </div>
+                  <div className="bg-zinc-800/50 rounded-xl p-4 text-xs text-zinc-400 leading-relaxed text-center space-y-3">
+                    <p>التطبيق الرسمي لأنصار أهلي برج بوعريريج.</p>
+                    <p>تم تطويره بحب للجراد الأصفر، ليجمع العائلة الصفراء في منصة رقمية واحدة.</p>
+                    <p>خريف أحمد© 2026 جميع الحقوق محفوظة.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -37,14 +37,14 @@ export default function App() {
 
   const renderScreen = () => {
     switch (activeTab) {
-      case 'home': return <Home />;
+      case 'home': return <Home onNavigate={setActiveTab} />;
       case 'match': return <MatchCenter />;
       case 'chants': return <ChantsLibrary />;
       case 'tv': return <CabbaTv />;
       case 'store': return <Store />;
       case 'profile': return <Profile />;
       case 'community': return <FanCommunity />;
-      default: return <Home />;
+      default: return <Home onNavigate={setActiveTab} />;
     }
   };
 

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import FanChallenges from './FanChallenges';
-import { Heart, MessageSquare, Share2, Image as ImageIcon, Send, User } from 'lucide-react';
+import { Heart, MessageSquare, Share2, Image as ImageIcon, Send, User, X } from 'lucide-react';
 
 interface Post {
   id: string;
@@ -50,6 +50,53 @@ export default function FanCommunity() {
   ]);
 
   const [newPostText, setNewPostText] = useState('');
+  const [newPostImage, setNewPostImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewPostImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [activeCommentsId, setActiveCommentsId] = useState<string | null>(null);
+  const [commentText, setCommentText] = useState('');
+
+  const handleShare = async (content: string) => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: 'مجتمع الكابا',
+          text: content,
+        });
+      } else {
+        alert('تم نسخ المنشور للحافظة!');
+      }
+    } catch (error) {
+      console.log('Error sharing:', error);
+    }
+  };
+
+  const handleAddComment = (postId: string) => {
+    if (!commentText.trim()) return;
+    setPosts(posts.map(post => {
+      if (post.id === postId) {
+        return {
+          ...post,
+          comments: post.comments + 1
+        };
+      }
+      return post;
+    }));
+    setCommentText('');
+    alert('تمت إضافة تعليقك بنجاح!');
+  };
 
   const handleLike = (postId: string) => {
     setPosts(posts.map(post => {
@@ -65,7 +112,7 @@ export default function FanCommunity() {
   };
 
   const handlePost = () => {
-    if (!newPostText.trim()) return;
+    if (!newPostText.trim() && !newPostImage) return;
     
     const newPost: Post = {
       id: Date.now().toString(),
@@ -73,6 +120,7 @@ export default function FanCommunity() {
       avatar: 'Y',
       time: 'الآن',
       content: newPostText,
+      imageUrl: newPostImage || undefined,
       likes: 0,
       comments: 0,
       isLiked: false,
@@ -80,6 +128,7 @@ export default function FanCommunity() {
     
     setPosts([newPost, ...posts]);
     setNewPostText('');
+    setNewPostImage(null);
   };
 
   return (
@@ -107,13 +156,36 @@ export default function FanCommunity() {
               placeholder="شارك أفكارك، صور، أو مشاعرك مع المدرج..."
               className="w-full bg-transparent text-white text-sm resize-none outline-none min-h-[60px] placeholder:text-zinc-600"
             />
+            
+            {newPostImage && (
+              <div className="relative mt-2 mb-2 rounded-xl overflow-hidden border border-zinc-800 bg-black/50">
+                <img src={newPostImage} alt="Preview" className="max-h-32 w-full object-cover opacity-80" />
+                <button 
+                  onClick={() => setNewPostImage(null)}
+                  className="absolute top-2 left-2 bg-black/60 text-white rounded-full p-1.5 hover:bg-red-500 transition-colors"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+
             <div className="flex justify-between items-center mt-2 pt-2 border-t border-zinc-800/50">
-              <button className="text-zinc-500 hover:text-yellow-500 transition-colors p-2 rounded-full hover:bg-zinc-800/50">
+              <input 
+                type="file" 
+                accept="image/*" 
+                ref={fileInputRef} 
+                className="hidden" 
+                onChange={handleImageUpload} 
+              />
+              <button 
+                onClick={() => fileInputRef.current?.click()} 
+                className="text-zinc-500 hover:text-yellow-500 transition-colors p-2 rounded-full hover:bg-zinc-800/50"
+              >
                 <ImageIcon size={20} />
               </button>
               <button 
                 onClick={handlePost}
-                disabled={!newPostText.trim()}
+                disabled={!newPostText.trim() && !newPostImage}
                 className="bg-yellow-500 hover:bg-yellow-400 text-black px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span>نشر</span>
@@ -138,7 +210,15 @@ export default function FanCommunity() {
                   <p className="text-[10px] text-zinc-500">{post.time}</p>
                 </div>
               </div>
-              <button className="text-zinc-600 hover:text-white">...</button>
+              <div className="relative">
+                <button onClick={() => setActiveMenuId(activeMenuId === post.id ? null : post.id)} className="text-zinc-600 hover:text-white p-2">...</button>
+                {activeMenuId === post.id && (
+                  <div className="absolute left-0 top-8 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl w-32 py-1 z-10 animate-in fade-in duration-200">
+                    <button onClick={() => { alert('تم حفظ المنشور في المفضلة'); setActiveMenuId(null); }} className="w-full text-right px-4 py-2 text-sm text-white hover:bg-zinc-700 transition-colors">حفظ المنشور</button>
+                    <button onClick={() => { alert('تم الإبلاغ عن هذا المنشور. شكراً لك.'); setActiveMenuId(null); }} className="w-full text-right px-4 py-2 text-sm text-red-400 hover:bg-zinc-700 transition-colors">إبلاغ</button>
+                  </div>
+                )}
+              </div>
             </div>
             
             <p className="text-sm text-zinc-300 leading-relaxed mb-4 whitespace-pre-wrap">
@@ -160,16 +240,33 @@ export default function FanCommunity() {
                 <span>{post.likes}</span>
               </button>
               
-              <button className="flex items-center gap-2 text-xs font-bold text-zinc-500 hover:text-white transition-colors">
+              <button onClick={() => setActiveCommentsId(activeCommentsId === post.id ? null : post.id)} className={`flex items-center gap-2 text-xs font-bold transition-colors ${activeCommentsId === post.id ? 'text-white' : 'text-zinc-500 hover:text-white'}`}>
                 <MessageSquare size={18} />
                 <span>{post.comments}</span>
               </button>
               
-              <button className="flex items-center gap-2 text-xs font-bold text-zinc-500 hover:text-white transition-colors">
+              <button onClick={() => handleShare(post.content)} className="flex items-center gap-2 text-xs font-bold text-zinc-500 hover:text-white transition-colors">
                 <Share2 size={18} />
                 <span>مشاركة</span>
               </button>
             </div>
+            
+            {activeCommentsId === post.id && (
+              <div className="mt-4 pt-4 border-t border-zinc-800/50 animate-in slide-in-from-top-2 duration-200">
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    placeholder="أضف تعليقاً..." 
+                    className="flex-1 bg-zinc-800/50 border border-zinc-700 rounded-full px-4 py-2 text-xs text-white outline-none focus:border-yellow-500 transition-colors"
+                  />
+                  <button onClick={() => handleAddComment(post.id)} disabled={!commentText.trim()} className="bg-yellow-500 text-black px-4 py-2 rounded-full text-xs font-bold disabled:opacity-50 transition-colors">
+                    إرسال
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ))}
       </div>

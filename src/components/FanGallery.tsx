@@ -65,7 +65,7 @@ export default function FanGallery() {
           </div>
           <h3 className="font-bold text-white text-lg">عدسة الجماهير</h3>
         </div>
-        <button className="text-xs font-bold text-yellow-500 bg-yellow-500/10 px-3 py-1.5 rounded-full hover:bg-yellow-500 hover:text-black transition-colors">
+        <button onClick={() => alert('هذه الخاصية ستتوفر قريباً!')} className="text-xs font-bold text-yellow-500 bg-yellow-500/10 px-3 py-1.5 rounded-full hover:bg-yellow-500 hover:text-black transition-colors">
           شارك صورتك
         </button>
       </div>
@@ -102,7 +102,7 @@ export default function FanGallery() {
                     <Heart size={20} className={isUpvoted ? 'fill-red-500' : ''} />
                     <span>{post.upvotes}</span>
                   </button>
-                  <button className="flex items-center gap-1.5 text-sm font-bold text-zinc-400 hover:text-white transition-colors">
+                  <button onClick={() => alert('هذه الخاصية ستتوفر قريباً!')} className="flex items-center gap-1.5 text-sm font-bold text-zinc-400 hover:text-white transition-colors">
                     <MessageCircle size={20} />
                     <span>{post.comments}</span>
                   </button>

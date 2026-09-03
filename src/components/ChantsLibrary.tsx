@@ -113,7 +113,7 @@ export default function ChantsLibrary() {
           <h3 className="font-bold text-white mb-2 text-sm">المكتبة الصوتية</h3>
           {audioList.map((audio) => (
             <div key={audio.id} className={`bg-zinc-900/80 border ${playingId === audio.id ? 'border-yellow-500 bg-zinc-900 shadow-[0_0_15px_rgba(234,179,8,0.1)]' : 'border-zinc-800/50'} rounded-2xl p-4 flex items-center gap-4 hover:border-yellow-500/50 transition-all cursor-pointer group`} onClick={() => setPlayingId(playingId === audio.id ? null : audio.id)}>
-              <button 
+              <button onClick={() => alert('هذه الخاصية ستتوفر قريباً!')} 
                 className={`w-12 h-12 rounded-full flex items-center justify-center flex-none transition-colors ${playingId === audio.id ? 'bg-yellow-500 text-black shadow-lg' : 'bg-zinc-800 text-yellow-500 group-hover:bg-zinc-700'}`}
               >
                 {playingId === audio.id ? <Pause size={18} className="fill-current" /> : <Play size={18} className="fill-current translate-x-[-1px]" />}

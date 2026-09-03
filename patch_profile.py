@@ -1,62 +1,68 @@
-import sys
+import re
 
-with open('src/components/Profile.tsx', 'r') as f:
+with open("src/components/Profile.tsx", "r") as f:
     content = f.read()
 
-import_statement = "import { Award, Shield, Settings, CheckCircle2, ChevronLeft, Moon, Sun, Heart, Calendar as CalendarIcon, MapPin } from 'lucide-react';\nimport { useFavorites } from '../hooks/useFavorites';\nimport { MATCHES_DATA } from './MatchCalendar';"
-content = content.replace("import { Award, Shield, Settings, CheckCircle2, ChevronLeft, Moon, Sun } from 'lucide-react';", import_statement)
+# Add useState to imports
+if "import { useState" not in content:
+    content = content.replace("import { Award,", "import { useState } from 'react';\nimport { Award,")
 
-use_fav_hook = """  const { theme, toggleTheme } = useTheme();
-  const { favorites } = useFavorites();
-  const favoriteMatches = MATCHES_DATA.filter(m => favorites.includes(m.id));"""
-content = content.replace("  const { theme, toggleTheme } = useTheme();", use_fav_hook)
+# Add state and login UI
+profile_start = "export default function Profile() {"
+state_addition = """
+  const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('isLoggedIn') === 'true');
 
-fav_section = """      {/* Favorite Matches */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-white text-lg flex items-center gap-2">
-            <Heart className="text-red-500 fill-current" size={20} />
-            المباريات المفضلة
-          </h3>
-          <span className="text-xs text-zinc-500 font-bold bg-zinc-800 px-2 py-1 rounded-md">{favorites.length} مباريات</span>
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    localStorage.setItem('isLoggedIn', 'true');
+    setIsLoggedIn(true);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('isLoggedIn');
+    setIsLoggedIn(false);
+    alert("تم تسجيل الخروج بنجاح");
+  };
+
+  if (!isLoggedIn) {
+    return (
+      <div className="p-4 space-y-6 h-full flex flex-col justify-center animate-in fade-in slide-in-from-bottom-4 duration-500" dir="rtl">
+        <div className="text-center space-y-4 mb-8">
+          <div className="w-24 h-24 mx-auto bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center border-4 border-zinc-900 shadow-[0_0_30px_rgba(234,179,8,0.3)]">
+            <span className="font-bold text-black text-5xl">C</span>
+          </div>
+          <h2 className="text-2xl font-bold text-white">تسجيل الدخول</h2>
+          <p className="text-sm text-zinc-400">سجل دخولك للانضمام إلى مجتمع أنصار الجراد الأصفر وتخصيص تجربتك.</p>
         </div>
-        
-        <div className="space-y-3">
-          {favoriteMatches.length > 0 ? (
-            favoriteMatches.map(match => (
-              <div key={match.id} className="bg-zinc-800/50 border border-zinc-700/50 rounded-xl p-3 flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center border-2 border-zinc-700">
-                    <span className="font-bold text-xs text-white truncate max-w-[20px]">{match.opponent.charAt(0)}</span>
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-white text-sm">{match.opponent}</h4>
-                    <div className="flex items-center gap-1 text-[10px] text-zinc-500 mt-0.5">
-                      <CalendarIcon size={10} /> {match.date}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex flex-col items-center">
-                  {match.status === 'past' ? (
-                    <span className="font-bold text-white tracking-widest">{match.score}</span>
-                  ) : (
-                    <span className="text-xs font-bold text-yellow-500">{match.time}</span>
-                  )}
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="text-center py-6">
-              <Heart size={32} className="text-zinc-700 mx-auto mb-2" />
-              <p className="text-xs text-zinc-500">لم تقم بإضافة أي مباراة للمفضلة بعد.</p>
-            </div>
-          )}
-        </div>
+
+        <form onSubmit={handleLogin} className="space-y-4 max-w-sm mx-auto w-full">
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-zinc-400">البريد الإلكتروني</label>
+            <input required type="email" placeholder="supporter@cabba.dz" className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-white text-right focus:outline-none focus:border-yellow-500 transition-colors" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-zinc-400">كلمة المرور</label>
+            <input required type="password" placeholder="••••••••" className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-white text-right focus:outline-none focus:border-yellow-500 transition-colors" />
+          </div>
+          <button type="submit" className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold text-lg p-4 rounded-xl shadow-[0_0_15px_rgba(234,179,8,0.4)] transition-all">
+            تسجيل الدخول
+          </button>
+        </form>
       </div>
+    );
+  }
+"""
 
-      {/* Gamification / Loyalty Points */}"""
+content = content.replace(profile_start, profile_start + state_addition)
 
-content = content.replace("      {/* Gamification / Loyalty Points */}", fav_section)
+# Replace the logout button onClick
+old_logout = """onClick={() => {
+          alert("تم تسجيل الخروج بنجاح");
+          window.location.reload();
+        }}"""
 
-with open('src/components/Profile.tsx', 'w') as f:
+content = content.replace(old_logout, "onClick={handleLogout}")
+
+with open("src/components/Profile.tsx", "w") as f:
     f.write(content)
+

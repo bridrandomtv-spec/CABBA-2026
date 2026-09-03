@@ -283,7 +283,7 @@ END:VCALENDAR`;
             
           </div>
 
-          <button className="w-full mt-6 bg-zinc-800 border border-yellow-500/50 hover:bg-zinc-700 text-yellow-500 text-sm font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2">
+          <button onClick={() => alert('هذه الخاصية ستتوفر قريباً!')} className="w-full mt-6 bg-zinc-800 border border-yellow-500/50 hover:bg-zinc-700 text-yellow-500 text-sm font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2">
              احجز مكانك في الحافلة (250 دج)
           </button>
         </div>

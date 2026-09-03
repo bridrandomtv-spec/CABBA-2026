@@ -48,6 +48,20 @@ export default function FanChallenges() {
     // In a real app, this would update the user's total points and badges
   };
 
+  const handleAction = (id: number) => {
+    if (id === 1) {
+      alert("سيتم فتح الكاميرا قريباً لالتقاط صورتك!");
+    } else if (id === 2) {
+      alert("تم تسجيل المقطع الصوتي بنجاح! لقد أكملت التحدي.");
+    }
+    
+    // Mark as completed
+    setChallenges(prev => prev.map(c => 
+      c.id === id ? { ...c, completed: true } : c
+    ));
+  };
+
+
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 shadow-sm">
       <div className="flex items-center justify-between mb-4">
@@ -99,8 +113,8 @@ export default function FanChallenges() {
               </div>
               
               {!challenge.completed && challenge.actionText && (
-                <button className="mt-4 w-full bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold py-2 rounded-lg transition-colors border border-zinc-700">
-                  {challenge.actionText}
+                <button onClick={() => handleAction(challenge.id)} className="mt-4 w-full bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold py-2 rounded-lg transition-colors border border-zinc-700 group hover:border-yellow-500/50">
+                  <span className="group-hover:text-yellow-500 transition-colors">{challenge.actionText}</span>
                 </button>
               )}
               

@@ -81,7 +81,7 @@ export default function CabbaTv() {
                 )}
               </div>
               
-              <button className="text-zinc-400 hover:text-white transition-colors">
+              <button onClick={() => alert('هذه الخاصية ستتوفر قريباً!')} className="text-zinc-400 hover:text-white transition-colors">
                 <Volume2 size={20} />
               </button>
             </div>
@@ -112,7 +112,7 @@ export default function CabbaTv() {
                 <h4 className="text-sm font-bold text-white mb-1 line-clamp-2 leading-tight">{video.title}</h4>
                 <p className="text-xs text-zinc-400">{video.views} مشاهدة</p>
               </div>
-              <button className="text-zinc-400 hover:text-white p-2 bg-zinc-800/50 rounded-full transition-colors">
+              <button onClick={() => alert('هذه الخاصية ستتوفر قريباً!')} className="text-zinc-400 hover:text-white p-2 bg-zinc-800/50 rounded-full transition-colors">
                 <Share2 size={16} />
               </button>
             </div>

@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import re
+
+content = """import { useState, useEffect } from 'react';
 import { Droplets, Wind, Sun, Cloud, CloudRain, CloudLightning, MapPin, Loader2 } from 'lucide-react';
 
 interface WeatherData {
@@ -150,3 +152,8 @@ export default function WeatherWidget() {
     </div>
   );
 }
+"""
+
+with open("src/components/WeatherWidget.tsx", "w") as f:
+    f.write(content)
+

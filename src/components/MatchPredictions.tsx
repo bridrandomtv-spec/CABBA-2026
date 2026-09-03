@@ -143,7 +143,7 @@ export default function MatchPredictions() {
               </div>
               <h3 className="font-bold text-white text-md">لوحة الصدارة</h3>
             </div>
-            <button className="text-xs text-zinc-400 flex items-center gap-1 hover:text-white transition-colors">
+            <button onClick={() => alert('هذه الخاصية ستتوفر قريباً!')} className="text-xs text-zinc-400 flex items-center gap-1 hover:text-white transition-colors">
                 هذا الأسبوع <ChevronDown size={14} />
             </button>
         </div>

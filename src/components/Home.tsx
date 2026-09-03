@@ -6,7 +6,11 @@ import WeatherWidget from './WeatherWidget';
 import FanPolls from './FanPolls';
 import FanGallery from './FanGallery';
 
-export default function Home() {
+interface HomeProps {
+  onNavigate?: (tab: any) => void;
+}
+
+export default function Home({ onNavigate }: HomeProps) {
   const [showHistory, setShowHistory] = useState(false);
 
   const news = [
@@ -74,7 +78,7 @@ export default function Home() {
             </div>
           </div>
           
-          <button className="w-full bg-yellow-500 hover:bg-yellow-400 text-black text-sm font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-colors">
+          <button onClick={() => onNavigate && onNavigate('match')} className="w-full bg-yellow-500 hover:bg-yellow-400 text-black text-sm font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-colors">
             مركز المباراة
             <ArrowLeft size={16} />
           </button>
@@ -148,7 +152,7 @@ export default function Home() {
             <p><span className="text-yellow-500 font-bold">•</span> عدد المساهمين هذا الشهر: <span className="font-bold text-white">342 مناصر</span></p>
           </div>
           
-          <button className="w-full mt-4 bg-zinc-800 hover:bg-zinc-700 text-yellow-500 text-sm font-bold py-3 px-4 rounded-xl transition-colors border border-zinc-700 hover:border-yellow-500/50">
+          <button onClick={() => alert('هذه الخاصية ستتوفر قريباً!')} className="w-full mt-4 bg-zinc-800 hover:bg-zinc-700 text-yellow-500 text-sm font-bold py-3 px-4 rounded-xl transition-colors border border-zinc-700 hover:border-yellow-500/50">
             ساهم الآن مع الجراد الأصفر
           </button>
         </div>
@@ -158,7 +162,7 @@ export default function Home() {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-bold text-lg text-white">آخر الأخبار</h3>
-          <button className="text-xs text-yellow-500 font-medium flex items-center hover:underline">
+          <button onClick={() => alert('هذه الخاصية ستتوفر قريباً!')} className="text-xs text-yellow-500 font-medium flex items-center hover:underline">
             عرض الكل
             <ChevronLeft size={14} />
           </button>

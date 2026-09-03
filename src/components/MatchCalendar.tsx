@@ -199,7 +199,7 @@ END:VCALENDAR`;
                     <div className="flex flex-col items-center gap-2">
                       <span className="font-black text-lg text-white">{match.time}</span>
                       <div className="flex gap-2">
-                        <button className="text-[10px] font-bold text-yellow-500 flex items-center gap-1 bg-yellow-500/10 px-2 py-1 rounded-md hover:bg-yellow-500 hover:text-black transition-colors">
+                        <button onClick={() => alert('هذه الخاصية ستتوفر قريباً!')} className="text-[10px] font-bold text-yellow-500 flex items-center gap-1 bg-yellow-500/10 px-2 py-1 rounded-md hover:bg-yellow-500 hover:text-black transition-colors">
                           <Bell size={12} /> تذكير
                         </button>
                         <button 
