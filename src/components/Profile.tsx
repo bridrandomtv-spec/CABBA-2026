@@ -182,22 +182,40 @@ export default function Profile() {
       <div className="space-y-2">
         <h4 className="font-bold text-zinc-400 text-sm px-2 mb-2">الإعدادات</h4>
         
-        <button className="w-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800/50 p-4 rounded-xl flex items-center justify-between transition-colors">
+        <button 
+          onClick={() => alert("قريباً: تعديل الملف الشخصي")}
+          className="w-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800/50 p-4 rounded-xl flex items-center justify-between transition-colors"
+        >
           <span className="text-sm text-white font-medium">الملف الشخصي</span>
           <ChevronLeft size={16} className="text-zinc-600" />
         </button>
 
         <NotificationSettings />
 
-        {['اللغة (العربية)', 'عن التطبيق'].map((item, i) => (
-          <button key={i} className="w-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800/50 p-4 rounded-xl flex items-center justify-between transition-colors">
-            <span className="text-sm text-white font-medium">{item}</span>
-            <ChevronLeft size={16} className="text-zinc-600" />
-          </button>
-        ))}
+        <button 
+          onClick={() => alert("العربية هي اللغة الوحيدة المتاحة حالياً.")}
+          className="w-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800/50 p-4 rounded-xl flex items-center justify-between transition-colors"
+        >
+          <span className="text-sm text-white font-medium">اللغة (العربية)</span>
+          <ChevronLeft size={16} className="text-zinc-600" />
+        </button>
+
+        <button 
+          onClick={() => alert("تطبيق أنصار شباب أهلي برج بوعريريج - الإصدار 1.0")}
+          className="w-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800/50 p-4 rounded-xl flex items-center justify-between transition-colors"
+        >
+          <span className="text-sm text-white font-medium">عن التطبيق</span>
+          <ChevronLeft size={16} className="text-zinc-600" />
+        </button>
       </div>
       
-      <button className="w-full text-red-400 text-sm font-bold p-4 bg-zinc-900 rounded-xl hover:bg-red-400/10 transition-colors">
+      <button 
+        onClick={() => {
+          alert("تم تسجيل الخروج بنجاح");
+          window.location.reload();
+        }}
+        className="w-full text-red-400 text-sm font-bold p-4 bg-zinc-900 rounded-xl hover:bg-red-400/10 transition-colors"
+      >
         تسجيل الخروج
       </button>
 
