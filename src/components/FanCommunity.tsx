@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { readJSON, writeJSON } from '../lib/storage';
 import FanChallenges from './FanChallenges';
 import { Heart, MessageSquare, Share2, Image as ImageIcon, Send, User, X } from 'lucide-react';
 
@@ -15,7 +16,7 @@ interface Post {
 }
 
 export default function FanCommunity() {
-  const [posts, setPosts] = useState<Post[]>([
+  const DEFAULT_POSTS: Post[] = [
     {
       id: '1',
       author: 'أحمد الكاباوي',
@@ -47,7 +48,15 @@ export default function FanCommunity() {
       comments: 112,
       isLiked: false,
     }
-  ]);
+  ];
+
+  const [posts, setPosts] = useState<Post[]>(() => {
+    return readJSON('cabba-community-posts', DEFAULT_POSTS);
+  });
+
+  useEffect(() => {
+    writeJSON('cabba-community-posts', posts);
+  }, [posts]);
 
   const [newPostText, setNewPostText] = useState('');
   const [newPostImage, setNewPostImage] = useState<string | null>(null);
