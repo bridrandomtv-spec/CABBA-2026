@@ -67,6 +67,19 @@ export default function FanCommunity() {
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [activeCommentsId, setActiveCommentsId] = useState<string | null>(null);
   const [commentText, setCommentText] = useState('');
+  const [activeFilter, setActiveFilter] = useState<'latest' | 'trending' | 'my'>('latest');
+
+  // Filter and sort posts
+  const displayPosts = [...posts]
+    .sort((a, b) => {
+      if (activeFilter === 'trending') return (b.likes + b.comments) - (a.likes + a.comments);
+      return 0; // Default order is latest first since we prepend new posts
+    })
+    .filter(post => {
+      if (activeFilter === 'my') return post.author === 'أنت';
+      return true;
+    });
+
 
   const handleShare = async (content: string) => {
     try {
@@ -196,9 +209,31 @@ export default function FanCommunity() {
         </div>
       </div>
 
+      {/* Posts Filter Tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        <button 
+          onClick={() => setActiveFilter('latest')}
+          className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-colors border ${activeFilter === 'latest' ? 'bg-yellow-500 text-black border-yellow-500' : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:border-zinc-700 hover:text-white'}`}
+        >
+          أحدث المنشورات
+        </button>
+        <button 
+          onClick={() => setActiveFilter('trending')}
+          className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-colors border ${activeFilter === 'trending' ? 'bg-yellow-500 text-black border-yellow-500' : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:border-zinc-700 hover:text-white'}`}
+        >
+          الأكثر تفاعلاً
+        </button>
+        <button 
+          onClick={() => setActiveFilter('my')}
+          className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-colors border ${activeFilter === 'my' ? 'bg-yellow-500 text-black border-yellow-500' : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:border-zinc-700 hover:text-white'}`}
+        >
+          منشوراتي
+        </button>
+      </div>
+
       {/* Posts Feed */}
       <div className="space-y-4">
-        {posts.map(post => (
+        {displayPosts.map(post => (
           <div key={post.id} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
