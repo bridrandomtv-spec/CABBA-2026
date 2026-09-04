@@ -1,4 +1,4 @@
-export type Tab = 'home' | 'match' | 'chants' | 'tv' | 'store' | 'profile' | 'community';
+export type Tab = 'home' | 'match' | 'chants' | 'tv' | 'store' | 'profile' | 'community' | 'admin';
 
 export interface ChatMessage {
   id: string;
@@ -30,4 +30,34 @@ export interface Product {
   price: number;
   imageUrl: string;
   category: 'kit' | 'merch';
+}
+
+export interface NewsItem {
+  id: string;
+  title: string;
+  content: string;
+  imageUrl?: string;
+  date: string;
+  createdAt: number;
+}
+
+export interface Match {
+  id: string;
+  homeTeam: string;
+  awayTeam: string;
+  competition: string;
+  date: string;
+  time: string;
+  stadium: string;
+  status: 'scheduled' | 'live' | 'finished' | 'postponed' | 'cancelled';
+  homeScore: number;
+  awayScore: number;
+  createdAt: number;
+}
+
+export interface AppUser {
+  uid: string;
+  email: string;
+  displayName: string;
+  role: 'user' | 'member' | 'staff' | 'admin';
 }

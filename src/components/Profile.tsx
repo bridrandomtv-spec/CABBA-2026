@@ -1,7 +1,14 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { useAuth } from '../contexts/AuthContext';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { doc, updateDoc } from 'firebase/firestore';
+import { updateProfile } from 'firebase/auth';
+import { auth, storage } from '../lib/firebase';
 import { Award, X, AlertCircle, Shield, Settings, CheckCircle2, ChevronLeft, Moon, Sun, Heart, Calendar as CalendarIcon, MapPin } from 'lucide-react';
 import { useFavorites } from '../hooks/useFavorites';
-import { MATCHES_DATA } from './MatchCalendar';
+import { Match } from '../types';
 import NotificationSettings from './NotificationSettings';
 import Achievements from './Achievements';
 import { QRCodeSVG } from 'qrcode.react';
@@ -10,9 +17,26 @@ import { useTheme } from '../ThemeContext';
 export default function Profile() {
   const { theme, toggleTheme } = useTheme();
   const { favorites } = useFavorites();
-  const [userName, setUserName] = useState(() => localStorage.getItem('userName') || 'أمين. ب');
-  const [userEmail, setUserEmail] = useState(() => localStorage.getItem('userEmail') || 'supporter@cabba.dz');
-  const [userAvatar, setUserAvatar] = useState(() => localStorage.getItem('userAvatar') || `https://api.dicebear.com/7.x/avataaars/svg?seed=Amine&backgroundColor=f59e0b`);
+  const { currentUser, userData, logout } = useAuth();
+  
+  const [membership, setMembership] = useState<any>(null);
+  
+  useEffect(() => {
+    if (!currentUser) return;
+    const q = query(collection(db, 'memberships'), where('userId', '==', currentUser.uid));
+    const un = onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        setMembership({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() });
+      } else {
+        setMembership(null);
+      }
+    });
+    return () => un();
+  }, [currentUser]);
+
+  const [userName, setUserName] = useState(userData?.displayName || currentUser?.displayName || 'المستخدم');
+  const [userEmail, setUserEmail] = useState(currentUser?.email || '');
+  const [userAvatar, setUserAvatar] = useState(currentUser?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData?.displayName || 'User'}&backgroundColor=f59e0b`);
   
   const [editName, setEditName] = useState(userName);
   const [editEmail, setEditEmail] = useState(userEmail);
@@ -31,13 +55,40 @@ export default function Profile() {
     }
   };
 
-  const handleSaveProfile = () => {
-    localStorage.setItem('userName', editName);
-    localStorage.setItem('userEmail', editEmail);
-    setUserName(editName);
-    setUserEmail(editEmail);
-    alert('تم حفظ التعديلات بنجاح!');
-    setActiveModal('none');
+  const [isSaving, setIsSaving] = useState(false);
+  
+  const handleSaveProfile = async () => {
+    if (!currentUser) return;
+    setIsSaving(true);
+    try {
+      let finalAvatar = userAvatar;
+      if (userAvatar.startsWith('data:image')) {
+        const imageRef = ref(storage, `avatars/${currentUser.uid}_${Date.now()}`);
+        await uploadString(imageRef, userAvatar, 'data_url');
+        finalAvatar = await getDownloadURL(imageRef);
+        setUserAvatar(finalAvatar);
+      }
+
+      await updateProfile(currentUser, {
+        displayName: editName,
+        photoURL: finalAvatar
+      });
+      
+      const userRef = doc(db, 'users', currentUser.uid);
+      await updateDoc(userRef, {
+        displayName: editName,
+        photoURL: finalAvatar
+      });
+
+      setUserName(editName);
+      alert('تم حفظ التعديلات بنجاح!');
+      setActiveModal('none');
+    } catch (error) {
+      console.error(error);
+      alert('حدث خطأ أثناء الحفظ');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const [activeModal, setActiveModal] = useState<'none' | 'profile' | 'language' | 'about'>('none');
@@ -213,7 +264,18 @@ export default function Profile() {
 
 
 
-  const favoriteMatches = MATCHES_DATA.filter(m => favorites.includes(m.id));
+  const [allMatches, setAllMatches] = useState<Match[]>([]);
+  useEffect(() => {
+    const q = query(collection(db, 'matches'));
+    const un = onSnapshot(q, (snapshot) => {
+      const data: Match[] = [];
+      snapshot.forEach(doc => data.push({ id: doc.id, ...doc.data() } as Match));
+      setAllMatches(data);
+    });
+    return () => un();
+  }, []);
+  
+  const favoriteMatches = allMatches.filter(m => favorites.includes(m.id));
 
   return (
     <div className="p-4 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500" dir="rtl">
@@ -294,18 +356,18 @@ export default function Profile() {
               <div key={match.id} className="bg-zinc-800/50 border border-zinc-700/50 rounded-xl p-3 flex justify-between items-center">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center border-2 border-zinc-700">
-                    <span className="font-bold text-xs text-white truncate max-w-[20px]">{match.opponent.charAt(0)}</span>
+                    <span className="font-bold text-xs text-white truncate max-w-[20px]">{match.awayTeam.charAt(0)}</span>
                   </div>
                   <div>
-                    <h4 className="font-bold text-white text-sm">{match.opponent}</h4>
+                    <h4 className="font-bold text-white text-sm">{match.awayTeam}</h4>
                     <div className="flex items-center gap-1 text-[10px] text-zinc-500 mt-0.5">
                       <CalendarIcon size={10} /> {match.date}
                     </div>
                   </div>
                 </div>
                 <div className="flex flex-col items-center">
-                  {match.status === 'past' ? (
-                    <span className="font-bold text-white tracking-widest">{match.score}</span>
+                  {match.status === 'finished' ? (
+                    <span className="font-bold text-white tracking-widest">{match.homeScore + ' - ' + match.awayScore}</span>
                   ) : (
                     <span className="text-xs font-bold text-yellow-500">{match.time}</span>
                   )}
@@ -477,9 +539,10 @@ export default function Profile() {
                   </div>
                   <button 
                     onClick={handleSaveProfile}
-                    className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold p-3 rounded-xl transition-colors mt-2"
+                    disabled={isSaving}
+                    className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold p-3 rounded-xl transition-colors mt-2 disabled:opacity-50"
                   >
-                    حفظ التغييرات
+                    {isSaving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
                   </button>
                 </div>
               )}

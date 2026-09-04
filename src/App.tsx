@@ -19,9 +19,27 @@ import OnboardingCarousel from './components/OnboardingCarousel';
 import MatchAlert from './components/MatchAlert';
 import NotificationCenter from './components/NotificationCenter';
 import { Bell, Bot, X } from 'lucide-react';
+import { useAuth } from './contexts/AuthContext';
+import Login from './components/auth/Login';
+import AdminDashboard from './components/admin/AdminDashboard';
+
+import { useEffect } from 'react';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<Tab>('home');
+  const { currentUser, loading: authLoading, userData } = useAuth();
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    return (sessionStorage.getItem('activeTab') as Tab) || 'home';
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem('activeTab', activeTab);
+  }, [activeTab]);
+  
+  useEffect(() => {
+    const handleNav = (e: any) => setActiveTab(e.detail);
+    window.addEventListener('navigate', handleNav);
+    return () => window.removeEventListener('navigate', handleNav);
+  }, []);
   const [showAi, setShowAi] = useState(false);
   // Lu à l'initialisation plutôt que dans un useEffect : évite que le carrousel
   // apparaisse en sautant après le premier rendu.
@@ -44,9 +62,28 @@ export default function App() {
       case 'store': return <Store />;
       case 'profile': return <Profile />;
       case 'community': return <FanCommunity />;
+      case 'admin': return userData?.role === 'admin' ? <AdminDashboard /> : <Home onNavigate={setActiveTab} />;
       default: return <Home onNavigate={setActiveTab} />;
     }
   };
+
+  if (authLoading) {
+    return (
+      <div className="w-full min-h-[100dvh] bg-zinc-950 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <div className="w-full min-h-[100dvh] bg-zinc-950 flex justify-center">
+        <div className="w-full max-w-md h-[100dvh] bg-zinc-950 border-x border-zinc-900/50">
+          <Login onLogin={() => {}} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full min-h-[100dvh] bg-zinc-950 flex justify-center text-right font-sans" dir="rtl">

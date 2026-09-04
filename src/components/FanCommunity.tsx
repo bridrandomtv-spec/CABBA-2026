@@ -1,11 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { collection, addDoc, updateDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, storage } from '../lib/firebase';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { useAuth } from '../contexts/AuthContext';
 import FanChallenges from './FanChallenges';
 import { Heart, MessageSquare, Share2, Image as ImageIcon, Send, User, X } from 'lucide-react';
 
 interface Post {
   id: string;
+  authorId?: string;
   author: string;
   avatar: string;
   time: string;
@@ -17,7 +20,9 @@ interface Post {
 }
 
 export default function FanCommunity() {
+  const { currentUser, userData } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
@@ -27,6 +32,7 @@ export default function FanCommunity() {
         const data = doc.data();
         postsData.push({
           id: doc.id,
+          authorId: data.authorId,
           author: data.author || 'مجهول',
           avatar: data.avatar || 'U',
           time: data.time || 'الآن',
@@ -34,7 +40,7 @@ export default function FanCommunity() {
           imageUrl: data.imageUrl,
           likes: data.likes || 0,
           comments: data.comments || 0,
-          isLiked: false, // Local state
+          isLiked: data.isLiked || false,
         });
       });
       setPosts(postsData);
@@ -43,285 +49,224 @@ export default function FanCommunity() {
     return () => unsubscribe();
   }, []);
 
+  const [activeTab, setActiveTab] = useState<'feed' | 'challenges'>('feed');
   const [newPostText, setNewPostText] = useState('');
   const [newPostImage, setNewPostImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setNewPostImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+    if (!file) return;
 
-  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
-  const [activeCommentsId, setActiveCommentsId] = useState<string | null>(null);
-  const [commentText, setCommentText] = useState('');
-  const [activeFilter, setActiveFilter] = useState<'latest' | 'trending' | 'my'>('latest');
-
-  // Filter and sort posts
-  const displayPosts = [...posts]
-    .sort((a, b) => {
-      if (activeFilter === 'trending') return (b.likes + b.comments) - (a.likes + a.comments);
-      return 0; // Default order is latest first since we prepend new posts
-    })
-    .filter(post => {
-      if (activeFilter === 'my') return post.author === 'أنت';
-      return true;
-    });
-
-
-  const handleShare = async (content: string) => {
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: 'مجتمع الكابا',
-          text: content,
-        });
-      } else {
-        alert('تم نسخ المنشور للحافظة!');
-      }
-    } catch (error) {
-      console.log('Error sharing:', error);
-    }
-  };
-
-  const handleAddComment = async (postId: string) => {
-    if (!commentText.trim()) return;
-    try {
-      const postRef = doc(db, 'posts', postId);
-      const post = posts.find(p => p.id === postId);
-      if (post) {
-        await updateDoc(postRef, {
-          comments: post.comments + 1
-        });
-      }
-      setCommentText('');
-      alert('تمت إضافة تعليقك بنجاح!');
-    } catch (e) {
-      console.error(e);
-      alert('حدث خطأ');
-    }
-  };
-
-  const handleLike = async (postId: string) => {
-    const post = posts.find(p => p.id === postId);
-    if (!post) return;
-    
-    // Optimistic local update for isLiked state
-    setPosts(posts.map(p => {
-      if (p.id === postId) {
-        return { ...p, isLiked: !p.isLiked };
-      }
-      return p;
-    }));
-
-    try {
-      const postRef = doc(db, 'posts', postId);
-      await updateDoc(postRef, {
-        likes: post.isLiked ? post.likes - 1 : post.likes + 1
-      });
-    } catch (e) {
-      console.error(e);
-      // Revert optimistic update
-      setPosts(posts.map(p => {
-        if (p.id === postId) {
-          return { ...p, isLiked: post.isLiked };
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        
+        const MAX_DIMENSION = 800;
+        if (width > height && width > MAX_DIMENSION) {
+          height *= MAX_DIMENSION / width;
+          width = MAX_DIMENSION;
+        } else if (height > MAX_DIMENSION) {
+          width *= MAX_DIMENSION / height;
+          height = MAX_DIMENSION;
         }
-        return p;
-      }));
-    }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        setNewPostImage(canvas.toDataURL('image/jpeg', 0.6));
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
   };
 
   const handlePost = async () => {
     if (!newPostText.trim() && !newPostImage) return;
+    setIsUploading(true);
     
     try {
+      let finalImageUrl = null;
+      if (newPostImage) {
+        if (newPostImage.startsWith('data:image')) {
+          const imageRef = ref(storage, `community/${Date.now()}_${Math.random().toString(36).substring(7)}`);
+          await uploadString(imageRef, newPostImage, 'data_url');
+          finalImageUrl = await getDownloadURL(imageRef);
+        } else {
+          finalImageUrl = newPostImage;
+        }
+      }
+      
       await addDoc(collection(db, 'posts'), {
-        author: 'أنت',
-        avatar: 'Y',
+        authorId: currentUser?.uid || '',
+        author: userData?.displayName || currentUser?.displayName || 'مشجع البرج',
+        avatar: currentUser?.photoURL || 'https://api.dicebear.com/7.x/avataaars/svg?seed=cabba&backgroundColor=f59e0b',
         time: 'الآن',
         content: newPostText,
-        imageUrl: newPostImage || null,
+        imageUrl: finalImageUrl,
         likes: 0,
         comments: 0,
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        isLiked: false
       });
-      
       setNewPostText('');
-      setNewPostImage(null);
-    } catch (e) {
-      console.error(e);
-      alert('حدث خطأ أثناء النشر');
+      setNewPostImage('');
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsUploading(false);
     }
   };
 
+  const toggleLike = async (postId: string) => {
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+    try {
+      await updateDoc(doc(db, 'posts', postId), {
+        likes: post.isLiked ? post.likes - 1 : post.likes + 1,
+        isLiked: !post.isLiked
+      });
+    } catch(e) {}
+  };
+
   return (
-    <div className="p-4 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500" dir="rtl">
-      
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-xl font-black text-white">مجتمع الكابا</h2>
-        <span className="bg-yellow-500/10 text-yellow-500 text-xs font-bold px-3 py-1 rounded-full border border-yellow-500/20">
-          +400 متصل الآن
-        </span>
-      </div>
-
-      <FanChallenges />
-
-      {/* New Post Input */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 shadow-sm">
-        <div className="flex gap-3">
-          <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 flex-none border border-zinc-700">
-            <User size={20} />
-          </div>
-          <div className="flex-1">
-            <textarea 
-              value={newPostText}
-              onChange={(e) => setNewPostText(e.target.value)}
-              placeholder="شارك أفكارك، صور، أو مشاعرك مع المدرج..."
-              className="w-full bg-transparent text-white text-sm resize-none outline-none min-h-[60px] placeholder:text-zinc-600"
-            />
-            
-            {newPostImage && (
-              <div className="relative mt-2 mb-2 rounded-xl overflow-hidden border border-zinc-800 bg-black/50">
-                <img src={newPostImage} alt="Preview" className="max-h-32 w-full object-cover opacity-80" />
-                <button 
-                  onClick={() => setNewPostImage(null)}
-                  className="absolute top-2 left-2 bg-black/60 text-white rounded-full p-1.5 hover:bg-red-500 transition-colors"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            )}
-
-            <div className="flex justify-between items-center mt-2 pt-2 border-t border-zinc-800/50">
-              <input 
-                type="file" 
-                accept="image/*" 
-                ref={fileInputRef} 
-                className="hidden" 
-                onChange={handleImageUpload} 
-              />
-              <button 
-                onClick={() => fileInputRef.current?.click()} 
-                className="text-zinc-500 hover:text-yellow-500 transition-colors p-2 rounded-full hover:bg-zinc-800/50"
-              >
-                <ImageIcon size={20} />
-              </button>
-              <button 
-                onClick={handlePost}
-                disabled={!newPostText.trim() && !newPostImage}
-                className="bg-yellow-500 hover:bg-yellow-400 text-black px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span>نشر</span>
-                <Send size={14} className="rotate-180" />
-              </button>
-            </div>
-          </div>
+    <div className="flex flex-col h-full bg-zinc-950" dir="rtl">
+      {/* Header Tabs */}
+      <div className="bg-zinc-900 border-b border-zinc-800 p-4">
+        <div className="flex bg-zinc-800 rounded-xl p-1 relative z-10">
+          <button 
+            onClick={() => setActiveTab('feed')}
+            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
+              activeTab === 'feed' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400'
+            }`}
+          >
+            المجتمع
+          </button>
+          <button 
+            onClick={() => setActiveTab('challenges')}
+            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
+              activeTab === 'challenges' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400'
+            }`}
+          >
+            التحديات 
+          </button>
         </div>
       </div>
 
-      {/* Posts Filter Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-        <button 
-          onClick={() => setActiveFilter('latest')}
-          className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-colors border ${activeFilter === 'latest' ? 'bg-yellow-500 text-black border-yellow-500' : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:border-zinc-700 hover:text-white'}`}
-        >
-          أحدث المنشورات
-        </button>
-        <button 
-          onClick={() => setActiveFilter('trending')}
-          className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-colors border ${activeFilter === 'trending' ? 'bg-yellow-500 text-black border-yellow-500' : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:border-zinc-700 hover:text-white'}`}
-        >
-          الأكثر تفاعلاً
-        </button>
-        <button 
-          onClick={() => setActiveFilter('my')}
-          className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-colors border ${activeFilter === 'my' ? 'bg-yellow-500 text-black border-yellow-500' : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:border-zinc-700 hover:text-white'}`}
-        >
-          منشوراتي
-        </button>
-      </div>
-
-      {/* Posts Feed */}
-      <div className="space-y-4">
-        {displayPosts.map(post => (
-          <div key={post.id} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-yellow-500 font-bold text-sm border border-zinc-700">
-                  {post.avatar}
-                </div>
-                <div>
-                  <h4 className="font-bold text-white text-sm">{post.author}</h4>
-                  <p className="text-[10px] text-zinc-500">{post.time}</p>
-                </div>
-              </div>
-              <div className="relative">
-                <button onClick={() => setActiveMenuId(activeMenuId === post.id ? null : post.id)} className="text-zinc-600 hover:text-white p-2">...</button>
-                {activeMenuId === post.id && (
-                  <div className="absolute left-0 top-8 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl w-32 py-1 z-10 animate-in fade-in duration-200">
-                    <button onClick={() => { alert('تم حفظ المنشور في المفضلة'); setActiveMenuId(null); }} className="w-full text-right px-4 py-2 text-sm text-white hover:bg-zinc-700 transition-colors">حفظ المنشور</button>
-                    <button onClick={() => { alert('تم الإبلاغ عن هذا المنشور. شكراً لك.'); setActiveMenuId(null); }} className="w-full text-right px-4 py-2 text-sm text-red-400 hover:bg-zinc-700 transition-colors">إبلاغ</button>
-                  </div>
-                )}
-              </div>
-            </div>
+      <div className="flex-1 overflow-y-auto hide-scrollbar pb-24">
+        {activeTab === 'feed' ? (
+          <div className="p-4 space-y-6">
             
-            <p className="text-sm text-zinc-300 leading-relaxed mb-4 whitespace-pre-wrap">
-              {post.content}
-            </p>
-
-            {post.imageUrl && (
-              <div className="mb-4 rounded-xl overflow-hidden border border-zinc-800">
-                <img src={post.imageUrl} alt="Post media" className="w-full h-auto object-cover max-h-[300px]" />
+            {/* Create Post */}
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 shadow-sm relative z-10">
+              <div className="flex gap-3 mb-3">
+                <div className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center border border-zinc-700 flex-shrink-0">
+                   {currentUser?.photoURL ? <img src={currentUser.photoURL} alt="Avatar" className="w-full h-full rounded-full" /> : <User size={20} className="text-zinc-500" />}
+                </div>
+                <textarea 
+                  value={newPostText}
+                  onChange={(e) => setNewPostText(e.target.value)}
+                  placeholder="شارك أفكارك مع العائلة الصفراء..."
+                  className="w-full bg-transparent border-none text-white focus:outline-none resize-none h-10 placeholder:text-zinc-600 text-sm py-2"
+                />
               </div>
-            )}
-
-            <div className="flex items-center justify-between pt-3 border-t border-zinc-800/50">
-              <button 
-                onClick={() => handleLike(post.id)}
-                className={`flex items-center gap-2 text-xs font-bold transition-colors ${post.isLiked ? 'text-red-500' : 'text-zinc-500 hover:text-red-400'}`}
-              >
-                <Heart size={18} className={post.isLiked ? 'fill-current' : ''} />
-                <span>{post.likes}</span>
-              </button>
               
-              <button onClick={() => setActiveCommentsId(activeCommentsId === post.id ? null : post.id)} className={`flex items-center gap-2 text-xs font-bold transition-colors ${activeCommentsId === post.id ? 'text-white' : 'text-zinc-500 hover:text-white'}`}>
-                <MessageSquare size={18} />
-                <span>{post.comments}</span>
-              </button>
-              
-              <button onClick={() => handleShare(post.content)} className="flex items-center gap-2 text-xs font-bold text-zinc-500 hover:text-white transition-colors">
-                <Share2 size={18} />
-                <span>مشاركة</span>
-              </button>
-            </div>
-            
-            {activeCommentsId === post.id && (
-              <div className="mt-4 pt-4 border-t border-zinc-800/50 animate-in slide-in-from-top-2 duration-200">
-                <div className="flex gap-2">
-                  <input 
-                    type="text" 
-                    value={commentText}
-                    onChange={(e) => setCommentText(e.target.value)}
-                    placeholder="أضف تعليقاً..." 
-                    className="flex-1 bg-zinc-800/50 border border-zinc-700 rounded-full px-4 py-2 text-xs text-white outline-none focus:border-yellow-500 transition-colors"
-                  />
-                  <button onClick={() => handleAddComment(post.id)} disabled={!commentText.trim()} className="bg-yellow-500 text-black px-4 py-2 rounded-full text-xs font-bold disabled:opacity-50 transition-colors">
-                    إرسال
+              {newPostImage && (
+                <div className="relative mb-3 rounded-xl overflow-hidden border border-zinc-800">
+                  <img src={newPostImage} alt="Preview" className="w-full max-h-48 object-cover" />
+                  <button 
+                    onClick={() => setNewPostImage(null)}
+                    className="absolute top-2 right-2 bg-black/50 text-white p-1 rounded-full hover:bg-red-500 transition-colors"
+                  >
+                    <X size={16} />
                   </button>
                 </div>
+              )}
+              
+              <div className="flex justify-between items-center border-t border-zinc-800 pt-3">
+                <div className="flex gap-2">
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    onChange={handleImageUpload} 
+                  />
+                  <button 
+                    onClick={() => fileInputRef.current?.click()} 
+                    className="text-zinc-500 hover:text-yellow-500 transition-colors p-2 rounded-full hover:bg-zinc-800/50"
+                  >
+                    <ImageIcon size={20} />
+                  </button>
+                </div>
+                <button 
+                  onClick={handlePost}
+                  disabled={(!newPostText.trim() && !newPostImage) || isUploading}
+                  className="bg-yellow-500 hover:bg-yellow-400 text-black px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span>{isUploading ? 'جاري النشر...' : 'نشر'}</span>
+                  {!isUploading && <Send size={14} className="rotate-180" />}
+                </button>
               </div>
-            )}
+            </div>
+
+            {/* Posts List */}
+            <div className="space-y-4">
+              {posts.map(post => (
+                <div key={post.id} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 shadow-sm relative z-10">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center border border-yellow-500/30">
+                        {post.avatar && post.avatar !== 'U' ? (
+                          <img src={post.avatar} alt={post.author} className="w-full h-full rounded-full" />
+                        ) : (
+                          <span className="font-bold text-yellow-500">{post.author.charAt(0)}</span>
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-white text-sm">{post.author}</h4>
+                        <p className="text-[10px] text-zinc-500">{post.time}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <p className="text-zinc-300 text-sm mb-3 leading-relaxed">
+                    {post.content}
+                  </p>
+                  
+                  {post.imageUrl && (
+                    <div className="rounded-xl overflow-hidden mb-3 border border-zinc-800 max-h-64">
+                      <img src={post.imageUrl} alt="Post media" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center gap-6 border-t border-zinc-800 pt-3 mt-2">
+                    <button 
+                      onClick={() => toggleLike(post.id)}
+                      className={`flex items-center gap-1.5 text-xs font-bold transition-colors ${post.isLiked ? 'text-red-500' : 'text-zinc-500 hover:text-red-400'}`}
+                    >
+                      <Heart size={16} className={post.isLiked ? 'fill-current' : ''} />
+                      <span>{post.likes}</span>
+                    </button>
+                    <button className="flex items-center gap-1.5 text-xs font-bold text-zinc-500 hover:text-white transition-colors">
+                      <MessageSquare size={16} />
+                      <span>{post.comments}</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        ))}
+        ) : (
+          <FanChallenges />
+        )}
       </div>
-      
     </div>
   );
 }

@@ -1,20 +1,36 @@
-import { useState } from 'react';
-import { Play, Share2, Tv, Radio, Pause, Volume2 } from 'lucide-react';
-import MatchHighlights from './MatchHighlights';
+import { useState, useEffect } from 'react';
+import { Play, Tv, Eye, Clock, Search, Filter } from 'lucide-react';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, increment } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { Video } from './admin/AdminVideos';
 
 export default function CabbaTv() {
-  const [isRadioPlaying, setIsRadioPlaying] = useState(false);
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [videos, setVideos] = useState<Video[]>([]);
+  
+  useEffect(() => {
+    const q = query(collection(db, 'videos'), orderBy('createdAt', 'desc'));
+    const un = onSnapshot(q, (snapshot) => {
+      const data: Video[] = [];
+      snapshot.forEach(doc => {
+        const v = { id: doc.id, ...doc.data() } as Video;
+        if (v.published) data.push(v);
+      });
+      setVideos(data);
+    });
+    return () => un();
+  }, []);
 
-  const videoList = [
-    { id: 'v1', title: 'كواليس التدريبات: تحضيرات الديربي', duration: '10:20', views: '45K', category: 'خلف الكواليس' },
-    { id: 'v2', title: 'دَخْلَة الجراد الأصفر ضد الوفاق', duration: '2:15', views: '110K', category: 'المدرجات' },
-    { id: 'v3', title: 'لقاء حصري مع أسطورة الجيل الذهبي', duration: '15:30', views: '32K', category: 'لقاءات' },
-  ];
+  const handlePlay = async (v: Video) => {
+    window.open(v.videoUrl, '_blank');
+    try {
+      await updateDoc(doc(db, 'videos', v.id), { views: increment(1) });
+    } catch(e) {}
+  };
 
   return (
     <div className="p-4 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500" dir="rtl">
-      
-      {/* Header */}
       <div className="flex items-center gap-3 mb-2">
         <div className="w-10 h-10 bg-yellow-500/10 rounded-full flex items-center justify-center text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]">
           <Tv size={20} />
@@ -25,99 +41,66 @@ export default function CabbaTv() {
         </div>
       </div>
 
-      <div className="space-y-4">
-        {/* Live Radio */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 shadow-lg relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/10 rounded-full blur-2xl translate-x-10 -translate-y-10"></div>
-          <div className="relative z-10 flex flex-col gap-4">
-            <div className="flex justify-between items-start">
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <div className="w-12 h-12 bg-zinc-800 rounded-full border border-yellow-500/50 flex items-center justify-center text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]">
-                    <Radio size={24} />
-                  </div>
-                  <span className="absolute -bottom-1 -right-1 flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                  </span>
-                </div>
-                <div>
-                  <h3 className="font-bold text-white text-lg">راديو الكابا</h3>
-                  <p className="text-xs text-zinc-400">تغطية مباشرة لأخبار النادي</p>
-                </div>
-              </div>
-              <span className="bg-red-500/10 text-red-500 text-[10px] font-bold px-2 py-1 rounded-md border border-red-500/20 flex items-center gap-1 shadow-sm">
-                مباشر <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></span>
-              </span>
-            </div>
-            
-            <div className="flex items-center gap-4 bg-zinc-800/50 p-3 rounded-xl border border-zinc-700/50">
-              <button 
-                onClick={() => setIsRadioPlaying(!isRadioPlaying)}
-                className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center text-black flex-none hover:scale-105 transition-transform shadow-[0_0_15px_rgba(234,179,8,0.3)]"
-              >
-                {isRadioPlaying ? <Pause size={20} className="fill-current" /> : <Play size={20} className="fill-current translate-x-[-1px]" />}
-              </button>
-              
-              <div className="flex-1 overflow-hidden">
-                {isRadioPlaying ? (
-                  <div className="flex items-center justify-center gap-1 h-6 w-full">
-                    {[...Array(15)].map((_, i) => (
-                      <div 
-                        key={i} 
-                        className="w-1.5 bg-yellow-500 rounded-full animate-[pulse_1s_ease-in-out_infinite]"
-                        style={{ 
-                          height: `${Math.max(20, Math.random() * 100)}%`,
-                          animationDelay: `${i * 0.1}s`,
-                          animationDuration: `${0.5 + Math.random() * 0.5}s`
-                        }}
-                      ></div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="h-6 flex items-center">
-                    <div className="w-full h-1 bg-zinc-700/50 rounded-full"></div>
-                  </div>
-                )}
-              </div>
-              
-              <button onClick={() => alert('هذه الخاصية ستتوفر قريباً!')} className="text-zinc-400 hover:text-white transition-colors">
-                <Volume2 size={20} />
-              </button>
-            </div>
-          </div>
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
+          <input 
+            type="text" 
+            placeholder="بحث عن فيديو..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl py-2 pr-10 pl-4 text-white text-sm focus:border-yellow-500 outline-none"
+          />
         </div>
+        <button className="bg-zinc-900 border border-zinc-800 text-zinc-400 p-2 rounded-xl hover:text-white">
+          <Filter size={18} />
+        </button>
+      </div>
 
-        <MatchHighlights />
-
-        <h3 className="font-bold text-white mb-2 mt-6 text-sm">أحدث الفيديوهات</h3>
-        {videoList.map((video) => (
-          <div key={video.id} className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden group">
-            <div className="aspect-video bg-zinc-800 relative flex items-center justify-center cursor-pointer overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10"></div>
-              <div className="absolute top-2 right-2 z-20">
-                <span className="bg-yellow-500 text-black text-[10px] font-bold px-2 py-0.5 rounded shadow">
-                  {video.category}
-                </span>
+      <div className="space-y-4">
+        {videos
+          .filter(v => activeCategory === 'all' || v.category === activeCategory)
+          .filter(v => v.title.includes(searchQuery) || v.description.includes(searchQuery))
+          .map(v => (
+          <div key={v.id} className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden group">
+            <div className="relative h-48 bg-zinc-800 cursor-pointer" onClick={() => handlePlay(v)}>
+              <img 
+                src={v.thumbnail || `https://images.unsplash.com/photo-1574629810360-7efbb4b2fac0?w=800&h=400&fit=crop&q=80&${v.id}`}
+                alt={v.title}
+                className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+              />
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-14 h-14 bg-yellow-500/90 text-black rounded-full flex items-center justify-center backdrop-blur-sm group-hover:scale-110 transition-transform shadow-[0_0_20px_rgba(234,179,8,0.4)]">
+                  <Play size={24} className="fill-current ml-1" />
+                </div>
               </div>
-              <div className="w-14 h-14 rounded-full bg-yellow-500 text-black flex items-center justify-center z-20 shadow-[0_0_20px_rgba(234,179,8,0.4)] scale-90 group-hover:scale-100 transition-transform">
-                <Play size={24} className="fill-current translate-x-[-1px]" />
-              </div>
-              <span className="absolute bottom-2 left-2 bg-black/80 text-zinc-50 text-[10px] px-2 py-1 rounded font-medium z-20 backdrop-blur-sm">
-                {video.duration}
-              </span>
             </div>
-            <div className="p-4 flex items-start justify-between gap-4">
-              <div>
-                <h4 className="text-sm font-bold text-white mb-1 line-clamp-2 leading-tight">{video.title}</h4>
-                <p className="text-xs text-zinc-400">{video.views} مشاهدة</p>
+            <div className="p-4">
+              <h3 className="font-bold text-white text-sm mb-2 group-hover:text-yellow-500 transition-colors line-clamp-2 cursor-pointer" onClick={() => handlePlay(v)}>
+                {v.title}
+              </h3>
+              <div className="flex items-center gap-4 text-xs text-zinc-500">
+                <div className="flex items-center gap-1">
+                  <Eye size={14} />
+                  <span>{v.views}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Clock size={14} />
+                  <span>جديد</span>
+                </div>
+                <div className="bg-zinc-800 px-2 py-1 rounded text-zinc-400 mr-auto">
+                  {v.category}
+                </div>
               </div>
-              <button onClick={() => alert('هذه الخاصية ستتوفر قريباً!')} className="text-zinc-400 hover:text-white p-2 bg-zinc-800/50 rounded-full transition-colors">
-                <Share2 size={16} />
-              </button>
             </div>
           </div>
         ))}
+        {videos.length === 0 && (
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 flex flex-col items-center justify-center text-center">
+            <Tv size={48} className="text-zinc-700 mb-4" />
+            <h4 className="font-bold text-zinc-400">لا توجد فيديوهات</h4>
+          </div>
+        )}
       </div>
     </div>
   );
