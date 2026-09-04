@@ -1,4 +1,6 @@
-import { Play, Calendar, Star, X, Activity } from 'lucide-react';
+import re
+
+content = """import { Play, Calendar, Star, X, Activity } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -121,3 +123,7 @@ export default function MatchHighlights() {
     </div>
   );
 }
+"""
+
+with open("src/components/MatchHighlights.tsx", "w") as f:
+    f.write(content)

@@ -8,7 +8,7 @@ export interface Product {
   name: string;
   description: string;
   price: number;
-  image: string;
+  imageUrl: string;
   category: string;
   stock: number;
   active: boolean;
@@ -35,7 +35,7 @@ export default function AdminStore({ onBack }: { onBack: () => void }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState(0);
-  const [image, setImage] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
   const [category, setCategory] = useState('أقمصة');
   const [stock, setStock] = useState(0);
   const [active, setActive] = useState(true);
@@ -60,17 +60,17 @@ export default function AdminStore({ onBack }: { onBack: () => void }) {
 
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !image.trim()) return;
+    if (!name.trim() || !imageUrl.trim()) return;
     setLoading(true);
 
     try {
       if (isEditing) {
         await updateDoc(doc(db, 'products', isEditing), {
-          name, description, price, image, category, stock, active
+          name, description, price, imageUrl, category, stock, active
         });
       } else {
         await addDoc(collection(db, 'products'), {
-          name, description, price, image, category, stock, active, createdAt: Date.now()
+          name, description, price, imageUrl, category, stock, active, createdAt: Date.now()
         });
       }
       resetForm();
@@ -87,7 +87,7 @@ export default function AdminStore({ onBack }: { onBack: () => void }) {
     setName(p.name);
     setDescription(p.description);
     setPrice(p.price);
-    setImage(p.image);
+    setImageUrl(p.imageUrl);
     setCategory(p.category);
     setStock(p.stock);
     setActive(p.active);
@@ -107,7 +107,7 @@ export default function AdminStore({ onBack }: { onBack: () => void }) {
     setName('');
     setDescription('');
     setPrice(0);
-    setImage('');
+    setImageUrl('');
     setCategory('أقمصة');
     setStock(0);
     setActive(true);
@@ -149,7 +149,7 @@ export default function AdminStore({ onBack }: { onBack: () => void }) {
                 <input type="number" placeholder="السعر (دج)" value={price} onChange={e => setPrice(parseInt(e.target.value)||0)} className="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-3 text-sm text-white" required />
                 <input type="number" placeholder="المخزون" value={stock} onChange={e => setStock(parseInt(e.target.value)||0)} className="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-3 text-sm text-white" required />
               </div>
-              <input type="url" placeholder="رابط الصورة" value={image} onChange={e => setImage(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-3 text-sm text-white" required />
+              <input type="url" placeholder="رابط الصورة" value={imageUrl} onChange={e => setImageUrl(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-3 text-sm text-white" required />
               
               <div className="flex gap-3">
                 <select value={category} onChange={e => setCategory(e.target.value)} className="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg p-3 text-sm text-white">
@@ -179,7 +179,7 @@ export default function AdminStore({ onBack }: { onBack: () => void }) {
               <div key={p.id} className="p-3 bg-zinc-800/30 rounded-xl border border-zinc-800 flex justify-between items-center">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-lg bg-zinc-800 overflow-hidden">
-                    <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                    <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
                   </div>
                   <div>
                     <h4 className="font-bold text-white text-sm">{p.name}</h4>

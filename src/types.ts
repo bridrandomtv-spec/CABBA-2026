@@ -30,6 +30,22 @@ export interface Product {
   price: number;
   imageUrl: string;
   category: 'kit' | 'merch';
+  stock?: number;
+  active?: boolean;
+}
+
+export interface CartItem {
+  product: Product;
+  quantity: number;
+}
+
+export interface Order {
+  id: string;
+  userId: string;
+  items: { productId: string; name: string; quantity: number; price: number }[];
+  total: number;
+  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  createdAt: number;
 }
 
 export interface NewsItem {

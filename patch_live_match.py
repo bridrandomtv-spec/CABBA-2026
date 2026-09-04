@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import re
+
+content = """import { useState, useEffect } from 'react';
 import { Clock, Activity, AlertCircle, Goal, Flag } from 'lucide-react';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -104,3 +106,7 @@ export default function LiveMatchUpdate({ matchId }: { matchId?: string }) {
     </div>
   );
 }
+"""
+
+with open("src/components/LiveMatchUpdate.tsx", "w") as f:
+    f.write(content)

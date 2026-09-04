@@ -3,7 +3,6 @@ import { collection, addDoc, updateDoc, doc, onSnapshot, query, orderBy } from '
 import { db, storage } from '../lib/firebase';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { useAuth } from '../contexts/AuthContext';
-import FanChallenges from './FanChallenges';
 import { Heart, MessageSquare, Share2, Image as ImageIcon, Send, User, X } from 'lucide-react';
 
 interface Post {
@@ -49,7 +48,6 @@ export default function FanCommunity() {
     return () => unsubscribe();
   }, []);
 
-  const [activeTab, setActiveTab] = useState<'feed' | 'challenges'>('feed');
   const [newPostText, setNewPostText] = useState('');
   const [newPostImage, setNewPostImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -137,30 +135,10 @@ export default function FanCommunity() {
 
   return (
     <div className="flex flex-col h-full bg-zinc-950" dir="rtl">
-      {/* Header Tabs */}
-      <div className="bg-zinc-900 border-b border-zinc-800 p-4">
-        <div className="flex bg-zinc-800 rounded-xl p-1 relative z-10">
-          <button 
-            onClick={() => setActiveTab('feed')}
-            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
-              activeTab === 'feed' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400'
-            }`}
-          >
-            المجتمع
-          </button>
-          <button 
-            onClick={() => setActiveTab('challenges')}
-            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
-              activeTab === 'challenges' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400'
-            }`}
-          >
-            التحديات 
-          </button>
-        </div>
-      </div>
+
 
       <div className="flex-1 overflow-y-auto hide-scrollbar pb-24">
-        {activeTab === 'feed' ? (
+        
           <div className="p-4 space-y-6">
             
             {/* Create Post */}
@@ -263,9 +241,6 @@ export default function FanCommunity() {
               ))}
             </div>
           </div>
-        ) : (
-          <FanChallenges />
-        )}
       </div>
     </div>
   );

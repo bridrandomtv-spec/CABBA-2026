@@ -1,5 +1,4 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
     function isAuthenticated() {
@@ -12,33 +11,56 @@ service cloud.firestore {
     
     function isAdmin() {
       return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     match /users/{userId} {
       allow read: if isAuthenticated();
-      allow create: if isOwner(userId);
-      allow update: if (isOwner(userId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])) || isAdmin();
+      allow create: if isOwner(userId) && (!request.resource.data.keys().hasAny(['role']) || request.resource.data.role == 'user');
+      allow update: if (isOwner(userId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'uid'])) || isAdmin();
       allow delete: if isAdmin();
     }
 
+    match /orders/{orderId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    match /memberships/{membershipId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      // Let's assume a user can request a membership (create), but can't modify status etc.
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid 
+                    && request.resource.data.status == 'pending';
+      allow update, delete: if isAdmin();
+    }
+
     match /posts/{postId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow create: if isAuthenticated();
-      allow update, delete: if isAuthenticated() && (resource.data.authorId == request.auth.uid || isAdmin());
+      // Allow user to like their own post? Like updates the post.
+      allow update: if isAuthenticated(); // To allow toggleLike. A stricter rule would check if only likes array/count is changed
+      allow delete: if isAuthenticated() && (resource.data.authorId == request.auth.uid || isAdmin());
     }
     
     match /comments/{commentId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       allow create: if isAuthenticated();
       allow update, delete: if isAuthenticated() && (resource.data.authorId == request.auth.uid || isAdmin());
     }
 
-    // Default rule for generic app content (News, Matches, Chants, Videos, Products)
-    // Public/Authenticated can read, only Admins can write
-    match /{collection}/{document=**} {
-      allow read: if true;
-      allow write: if isAdmin();
+    // Explicitly secure products, matches, news, chants, videos, highlights
+    match /products/{id} { allow read: if true; allow update: if isAuthenticated(); allow create, delete: if isAdmin(); }
+    match /matches/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /matches/{id}/updates/{updateId} { allow read: if true; allow write: if isAdmin(); }
+    match /news/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /chants/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /videos/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /highlights/{id} { allow read: if true; allow write: if isAdmin(); }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

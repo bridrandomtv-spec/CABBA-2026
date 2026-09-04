@@ -151,10 +151,6 @@ export default function Home({ onNavigate }: HomeProps) {
             <p className="mb-2"><span className="text-yellow-500 font-bold">•</span> المساهمات الأخيرة ذهبت لـ: <span className="font-bold text-white">مصاريف تنقل الفريق للفئات الشبانية</span></p>
             <p><span className="text-yellow-500 font-bold">•</span> عدد المساهمين هذا الشهر: <span className="font-bold text-white">342 مناصر</span></p>
           </div>
-          
-          <button onClick={() => alert('هذه الخاصية ستتوفر قريباً!')} className="w-full mt-4 bg-zinc-800 hover:bg-zinc-700 text-yellow-500 text-sm font-bold py-3 px-4 rounded-xl transition-colors border border-zinc-700 hover:border-yellow-500/50">
-            ساهم الآن مع الجراد الأصفر
-          </button>
         </div>
       </div>
 
@@ -162,10 +158,6 @@ export default function Home({ onNavigate }: HomeProps) {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-bold text-lg text-white">آخر الأخبار</h3>
-          <button onClick={() => alert('هذه الخاصية ستتوفر قريباً!')} className="text-xs text-yellow-500 font-medium flex items-center hover:underline">
-            عرض الكل
-            <ChevronLeft size={14} />
-          </button>
         </div>
         
         <div className="space-y-3">

@@ -4,7 +4,7 @@ import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { doc, updateDoc } from 'firebase/firestore';
-import { updateProfile } from 'firebase/auth';
+import { updateProfile, sendPasswordResetEmail, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, storage } from '../lib/firebase';
 import { Award, X, AlertCircle, Shield, Settings, CheckCircle2, ChevronLeft, Moon, Sun, Heart, Calendar as CalendarIcon, MapPin } from 'lucide-react';
 import { useFavorites } from '../hooks/useFavorites';
@@ -97,23 +97,31 @@ export default function Profile() {
   const changeLanguage = (lang: string) => {
     setLanguage(lang);
     localStorage.setItem('appLang', lang);
-    if (lang === 'fr') {
-      alert('La langue française sera bientôt appliquée partout ! (En cours de traduction)');
-    } else if (lang === 'en') {
-      alert('English language will be applied everywhere soon! (Translation in progress)');
-    }
   };
 
 
 
 
-  const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('isLoggedIn') === 'true');
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [formErrors, setFormErrors] = useState<string[]>([]);
+
+  const handleResetPassword = async () => {
+    if (!email) {
+      alert('الرجاء إدخال البريد الإلكتروني أولاً');
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email);
+      alert('تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني.');
+    } catch (error: any) {
+      console.error(error);
+      alert('حدث خطأ. تأكد من صحة البريد الإلكتروني.');
+    }
+  };
 
   const handleAuth = (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,16 +154,18 @@ export default function Profile() {
     }
     localStorage.setItem('userEmail', email);
     setUserEmail(email);
-    setIsLoggedIn(true);
+    
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('isLoggedIn');
-    setIsLoggedIn(false);
-    alert("تم تسجيل الخروج بنجاح");
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  if (!isLoggedIn) {
+  if (!currentUser) {
     return (
       <div className="p-4 space-y-6 h-full flex flex-col justify-center animate-in fade-in slide-in-from-bottom-4 duration-500" dir="rtl">
         <div className="text-center space-y-4 mb-8 mt-10">
@@ -240,7 +250,7 @@ export default function Profile() {
           <div className="flex justify-between items-center px-1">
             {authMode === 'login' ? (
               <>
-                <button type="button" onClick={() => alert('سيتم إرسال رابط إعادة تعيين كلمة المرور.')} className="text-xs text-yellow-500 font-bold hover:underline">
+                <button type="button" onClick={handleResetPassword} className="text-xs text-yellow-500 font-bold hover:underline">
                   هل نسيت كلمة المرور؟
                 </button>
                 <button type="button" onClick={() => { setAuthMode('signup'); setFormErrors([]); }} className="text-xs text-zinc-400 font-bold hover:text-white transition-colors">
@@ -401,21 +411,6 @@ export default function Profile() {
         </div>
 
         <div className="space-y-3">
-          <button onClick={() => alert('هذه الخاصية ستتوفر قريباً!')} className="w-full bg-zinc-800 hover:bg-zinc-700 transition-colors p-3 rounded-xl flex items-center justify-between group">
-            <div className="flex items-center gap-3">
-              <Shield size={18} className="text-zinc-400 group-hover:text-yellow-500 transition-colors" />
-              <span className="text-sm text-white font-medium">توقع مباريات الكابا</span>
-            </div>
-            <ChevronLeft size={16} className="text-zinc-500" />
-          </button>
-          
-          <button onClick={() => alert('هذه الخاصية ستتوفر قريباً!')} className="w-full bg-zinc-800 hover:bg-zinc-700 transition-colors p-3 rounded-xl flex items-center justify-between group">
-            <div className="flex items-center gap-3">
-              <CheckCircle2 size={18} className="text-zinc-400 group-hover:text-yellow-500 transition-colors" />
-              <span className="text-sm text-white font-medium">استبدال النقاط بالمكافآت</span>
-            </div>
-            <ChevronLeft size={16} className="text-zinc-500" />
-          </button>
         </div>
       </div>
 
