@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, updateDoc } from 'firebase/firestore';
-import { auth, db } from '../../lib/firebase';
+import { useAuth } from '../../contexts/AuthContext';
 import { Lock, Mail, User as UserIcon } from 'lucide-react';
 
 export default function Login({ onLogin }: { onLogin: () => void }) {
@@ -11,29 +9,7 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const getArabicErrorMessage = (errorCode: string) => {
-    switch (errorCode) {
-      case 'auth/operation-not-allowed':
-        return 'التسجيل بالبريد الإلكتروني وكلمة المرور غير مفعّل حالياً. يرجى تفعيل هذه الخدمة في إعدادات Firebase Authentication.';
-      case 'auth/email-already-in-use':
-        return 'البريد الإلكتروني مستخدم بالفعل لحساب آخر.';
-      case 'auth/invalid-email':
-        return 'البريد الإلكتروني المدخل غير صالح.';
-      case 'auth/weak-password':
-        return 'كلمة المرور ضعيفة جداً (يجب أن تتكون من 6 أحرف على الأقل).';
-      case 'auth/network-request-failed':
-        return 'خطأ في الاتصال بالشبكة. يرجى التحقق من اتصالك بالإنترنت.';
-      case 'auth/too-many-requests':
-        return 'تم حظر الطلب مؤقتاً بسبب كثرة المحاولات. يرجى المحاولة لاحقاً.';
-      case 'auth/user-not-found':
-      case 'auth/wrong-password':
-      case 'auth/invalid-credential':
-        return 'البريد الإلكتروني أو كلمة المرور غير صحيحة.';
-      default:
-        return 'حدث خطأ في المصادقة. يرجى المحاولة مرة أخرى.';
-    }
-  };
+  const { refreshUser } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,30 +18,34 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
 
     try {
       if (isRegister) {
-        // Will also create the document via AuthContext logic
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, displayName: name }),
+        });
         
-        if (name) {
-          try {
-            await updateProfile(userCredential.user, { displayName: name });
-            setTimeout(async () => {
-              try {
-                await updateDoc(doc(db, 'users', userCredential.user.uid), { displayName: name });
-              } catch (e) {
-                console.error('Error updating name in firestore:', e);
-              }
-            }, 1000);
-          } catch (e) {
-            console.error('Error updating profile:', e);
-          }
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || 'حدث خطأ في المصادقة. يرجى المحاولة مرة أخرى.');
         }
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || 'البريد الإلكتروني أو كلمة المرور غير صحيحة.');
+        }
       }
+      
+      await refreshUser();
       onLogin();
     } catch (err: any) {
-      console.error('Firebase Auth Error:', err.code, err.message);
-      setError(getArabicErrorMessage(err.code));
+      console.error('Auth Error:', err);
+      setError(err.message);
     } finally {
       setLoading(false);
     }

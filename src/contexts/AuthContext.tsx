@@ -1,25 +1,20 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { 
-  User, 
-  onAuthStateChanged, 
-  signOut as firebaseSignOut 
-} from 'firebase/auth';
-import { auth, db } from '../lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 interface UserData {
-  uid: string;
-  email: string | null;
+  id: string;
+  email: string;
   displayName: string | null;
-  role: 'user' | 'member' | 'staff' | 'admin';
-  membershipStatus?: 'active' | 'pending' | 'expired';
+  avatarUrl: string | null;
+  role: 'user' | 'admin';
+  createdAt: string;
 }
 
 interface AuthContextType {
-  currentUser: User | null;
+  currentUser: UserData | null;
   userData: UserData | null;
   loading: boolean;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -27,47 +22,44 @@ const AuthContext = createContext<AuthContextType>({
   userData: null,
   loading: true,
   logout: async () => {},
+  refreshUser: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setCurrentUser(user);
-      if (user) {
-        // Fetch custom user data from Firestore (roles, etc.)
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
-        
-        if (userDoc.exists()) {
-          setUserData(userDoc.data() as UserData);
-        } else {
-          // Create initial user document if it doesn't exist
-          const newUserData: UserData = {
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName || 'مشجع كاباوي',
-            role: 'user', // Default role
-          };
-          await setDoc(userDocRef, newUserData);
-          setUserData(newUserData);
-        }
+  const fetchUser = async () => {
+    try {
+      const res = await fetch('/api/auth/me');
+      if (res.ok) {
+        const data = await res.json();
+        setUserData(data.user);
       } else {
         setUserData(null);
       }
+    } catch (e) {
+      setUserData(null);
+    } finally {
       setLoading(false);
-    });
+    }
+  };
 
-    return () => unsubscribe();
+  useEffect(() => {
+    fetchUser();
   }, []);
 
-  const logout = () => firebaseSignOut(auth);
+  const logout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      setUserData(null);
+    } catch (e) {
+      console.error('Logout error', e);
+    }
+  };
 
   return (
-    <AuthContext.Provider value={{ currentUser, userData, loading, logout }}>
+    <AuthContext.Provider value={{ currentUser: userData, userData, loading, logout, refreshUser: fetchUser }}>
       {!loading && children}
     </AuthContext.Provider>
   );

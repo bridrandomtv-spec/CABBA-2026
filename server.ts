@@ -2,6 +2,8 @@ import express from "express";
 import path from "path";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+import cookieParser from "cookie-parser";
+import { authRouter } from "./server/auth.ts";
 
 dotenv.config();
 
@@ -23,6 +25,8 @@ if (!GEMINI_API_KEY) {
 }
 
 app.use(express.json({ limit: "128kb" }));
+app.use(cookieParser());
+app.use("/api/auth", authRouter);
 
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY ?? "" });
 

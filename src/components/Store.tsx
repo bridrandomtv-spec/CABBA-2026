@@ -109,7 +109,7 @@ export default function Store() {
         // Create order
         const newOrderRef = doc(collection(db, 'orders'));
         transaction.set(newOrderRef, {
-          userId: currentUser.uid,
+          userId: currentUser.id,
           items: orderItems,
           total: calculatedTotal,
           status: 'pending',

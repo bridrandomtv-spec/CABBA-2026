@@ -102,9 +102,9 @@ export default function FanCommunity() {
       }
       
       await addDoc(collection(db, 'posts'), {
-        authorId: currentUser?.uid || '',
+        authorId: currentUser?.id || '',
         author: userData?.displayName || currentUser?.displayName || 'مشجع البرج',
-        avatar: currentUser?.photoURL || 'https://api.dicebear.com/7.x/avataaars/svg?seed=cabba&backgroundColor=f59e0b',
+        avatar: currentUser?.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=cabba&backgroundColor=f59e0b',
         time: 'الآن',
         content: newPostText,
         imageUrl: finalImageUrl,
@@ -145,7 +145,7 @@ export default function FanCommunity() {
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 shadow-sm relative z-10">
               <div className="flex gap-3 mb-3">
                 <div className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center border border-zinc-700 flex-shrink-0">
-                   {currentUser?.photoURL ? <img src={currentUser.photoURL} alt="Avatar" className="w-full h-full rounded-full" /> : <User size={20} className="text-zinc-500" />}
+                   {currentUser?.avatarUrl ? <img src={currentUser.avatarUrl} alt="Avatar" className="w-full h-full rounded-full" /> : <User size={20} className="text-zinc-500" />}
                 </div>
                 <textarea 
                   value={newPostText}

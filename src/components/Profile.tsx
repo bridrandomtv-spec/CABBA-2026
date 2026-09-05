@@ -4,8 +4,8 @@ import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { doc, updateDoc } from 'firebase/firestore';
-import { updateProfile, sendPasswordResetEmail, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth, storage } from '../lib/firebase';
+
+import { storage } from '../lib/firebase';
 import { Award, X, AlertCircle, Shield, Settings, CheckCircle2, ChevronLeft, Moon, Sun, Heart, Calendar as CalendarIcon, MapPin } from 'lucide-react';
 import { useFavorites } from '../hooks/useFavorites';
 import { Match } from '../types';
@@ -17,13 +17,13 @@ import { useTheme } from '../ThemeContext';
 export default function Profile() {
   const { theme, toggleTheme } = useTheme();
   const { favorites } = useFavorites();
-  const { currentUser, userData, logout } = useAuth();
+  const { currentUser, userData, logout, refreshUser } = useAuth();
   
   const [membership, setMembership] = useState<any>(null);
   
   useEffect(() => {
     if (!currentUser) return;
-    const q = query(collection(db, 'memberships'), where('userId', '==', currentUser.uid));
+    const q = query(collection(db, 'memberships'), where('userId', '==', currentUser.id));
     const un = onSnapshot(q, (snapshot) => {
       if (!snapshot.empty) {
         setMembership({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() });
@@ -36,7 +36,7 @@ export default function Profile() {
 
   const [userName, setUserName] = useState(userData?.displayName || currentUser?.displayName || 'المستخدم');
   const [userEmail, setUserEmail] = useState(currentUser?.email || '');
-  const [userAvatar, setUserAvatar] = useState(currentUser?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData?.displayName || 'User'}&backgroundColor=f59e0b`);
+  const [userAvatar, setUserAvatar] = useState(currentUser?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData?.displayName || 'User'}&backgroundColor=f59e0b`);
   
   const [editName, setEditName] = useState(userName);
   const [editEmail, setEditEmail] = useState(userEmail);
@@ -63,22 +63,21 @@ export default function Profile() {
     try {
       let finalAvatar = userAvatar;
       if (userAvatar.startsWith('data:image')) {
-        const imageRef = ref(storage, `avatars/${currentUser.uid}_${Date.now()}`);
+        const imageRef = ref(storage, `avatars/${currentUser.id}_${Date.now()}`);
         await uploadString(imageRef, userAvatar, 'data_url');
         finalAvatar = await getDownloadURL(imageRef);
         setUserAvatar(finalAvatar);
       }
 
-      await updateProfile(currentUser, {
-        displayName: editName,
-        photoURL: finalAvatar
+      const res = await fetch('/api/auth/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ displayName: editName, avatarUrl: finalAvatar })
       });
-      
-      const userRef = doc(db, 'users', currentUser.uid);
-      await updateDoc(userRef, {
-        displayName: editName,
-        photoURL: finalAvatar
-      });
+      if (!res.ok) throw new Error('فشل تحديث الملف الشخصي');
+      if (refreshUser) {
+        await refreshUser();
+      }
 
       setUserName(editName);
       alert('تم حفظ التعديلات بنجاح!');
@@ -115,7 +114,7 @@ export default function Profile() {
       return;
     }
     try {
-      await sendPasswordResetEmail(auth, email);
+      alert('NOT MIGRATED');
       alert('تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني.');
     } catch (error: any) {
       console.error(error);

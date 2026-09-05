@@ -22,7 +22,7 @@ export default function AdminUsers({ onBack }: { onBack: () => void }) {
   }, []);
 
   const handleRoleChange = async (uid: string, newRole: string) => {
-    if (uid === currentUser?.uid) {
+    if (uid === currentUser?.id) {
       alert('لا يمكنك تغيير صلاحياتك الخاصة');
       return;
     }
@@ -63,7 +63,7 @@ export default function AdminUsers({ onBack }: { onBack: () => void }) {
               <select 
                 value={u.role}
                 onChange={(e) => handleRoleChange(u.uid, e.target.value)}
-                disabled={u.uid === currentUser?.uid}
+                disabled={u.uid === currentUser?.id}
                 className="bg-transparent text-white text-sm outline-none flex-1"
               >
                 <option value="user" className="bg-zinc-900">مشجع عادي</option>
